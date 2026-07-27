@@ -1,0 +1,83 @@
+name: CI/CD & Release
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        run: npm install -g pnpm@11.1.3
+
+      - name: Install dependencies
+        run: CI=true pnpm install --frozen-lockfile
+
+      - name: Inject Version (On Tag Push)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          node -e '
+            const fs = require("fs");
+            const tag = process.env.TAG_NAME || "v0.260727.0";
+            const raw = tag.replace(/^v/, "");
+            const parts = raw.split(".");
+            
+            let manifestVer = raw;
+            // Convert v[Major].[YYMMDD].[Rev] -> [Major].[YY].[MMDD].[Rev]
+            if (parts.length >= 2 && parts[1].length === 6) {
+              const major = parts[0];
+              const yymmdd = parts[1];
+              const rev = parts[2] || "0";
+              const yy = parseInt(yymmdd.slice(0, 2), 10);
+              const mmdd = parseInt(yymmdd.slice(2), 10);
+              manifestVer = `${major}.${yy}.${mmdd}.${rev}`;
+            }
+            
+            const scriptPath = "apps/extension/scripts/build.mjs";
+            if (fs.existsSync(scriptPath)) {
+              let content = fs.readFileSync(scriptPath, "utf8");
+              content = content.replace(/version:\s*["\x27]\d+\.\d+\.\d+["\x27]/, `version: "${manifestVer}"`);
+              fs.writeFileSync(scriptPath, content);
+              console.log(`Tag "${tag}" mapped to Chrome Manifest Version "${manifestVer}"`);
+            }
+          '
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+
+      - name: Build packages and extension
+        run: CI=true pnpm build
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Package Extension ZIP (On Tag Push)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          cd apps/extension/dist
+          zip -r ../../../LyricStage-Extension-${{ github.ref_name }}.zip .
+
+      - name: Create GitHub Release (On Tag Push)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          gh release create "${{ github.ref_name }}" LyricStage-Extension-${{ github.ref_name }}.zip \
+            --title "${{ github.ref_name }}" \
+            --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,152 @@
+:host {
+  /*
+   * Unified system UI font strategy (macOS + Windows + others):
+   * - One family stack for every script (no PingFang / Hiragino W3–W7 splits)
+   * - Weight is a single CSS number per tier (no Latin-700 vs CJK-600 optics)
+   * - OS may still map CJK glyphs to a paired UI face; we no longer force it
+   *
+   * Custom fonts: font-profile may set --am-lp-font-override* on the host.
+   */
+  --am-lp-font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji",
+    "Segoe UI Emoji", sans-serif;
+
+  /* Back-compat aliases used by overrides / older selectors. */
+  --am-lp-font-latin: var(--am-lp-font-ui);
+  --am-lp-font-zh-hans: var(--am-lp-font-ui);
+  --am-lp-font-zh-hant: var(--am-lp-font-ui);
+  --am-lp-font-ja: var(--am-lp-font-ui);
+  --am-lp-font-ja-regular: var(--am-lp-font-ui);
+  --am-lp-font-ko: var(--am-lp-font-ui);
+
+  font-kerning: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/*
+ * Plaintext poem view has its own weight tier, independent of the synced
+ * control (the poem's visual density wants lighter weights than karaoke).
+ * Same number for Latin / CJK — no per-script offset. Default tier 1 (400)
+ * preserves the accepted "one step lighter" tuning when unset.
+ */
+.am-lp-root[data-display-mode="plaintext"] {
+  --am-lp-main-font-weight: 400;
+  --am-lp-cjk-font-weight: 400;
+  --am-lp-static-font-weight: 400;
+}
+
+.am-lp-root[data-display-mode="plaintext"][data-plaintext-weight-tier="2"] {
+  --am-lp-main-font-weight: 500;
+  --am-lp-cjk-font-weight: 500;
+  --am-lp-static-font-weight: 500;
+}
+
+.am-lp-root[data-display-mode="plaintext"][data-plaintext-weight-tier="3"] {
+  --am-lp-main-font-weight: 600;
+  --am-lp-cjk-font-weight: 600;
+  --am-lp-static-font-weight: 600;
+}
+
+.am-lp-root[data-display-mode="plaintext"][data-plaintext-weight-tier="4"] {
+  --am-lp-main-font-weight: 700;
+  --am-lp-cjk-font-weight: 700;
+  --am-lp-static-font-weight: 700;
+}
+
+.am-lp-root[data-display-mode="plaintext"][data-plaintext-weight-tier="5"] {
+  --am-lp-main-font-weight: 800;
+  --am-lp-cjk-font-weight: 800;
+  --am-lp-static-font-weight: 800;
+}
+
+.am-lp-line-row,
+.am-lp-plaintext-row,
+.am-lp-text {
+  font-family: var(
+    --am-lp-font-override,
+    var(--am-lp-font-override-latin, var(--am-lp-font-ui))
+  );
+  /* Keep false synthesis so karaoke mask geometry is not faked bold. */
+  font-synthesis: none;
+}
+
+/*
+ * Per-script override hooks only (font-profile custom/google/system family).
+ * Default path is always --am-lp-font-ui.
+ */
+.am-lp-text:lang(zh),
+.am-lp-text:lang(und-Hani),
+.am-lp-text:lang(zh-Hans),
+.am-lp-text:lang(zh-CN),
+.am-lp-text:lang(zh-SG) {
+  font-family: var(
+    --am-lp-font-override-zh-hans,
+    var(--am-lp-font-override, var(--am-lp-font-ui))
+  );
+}
+
+.am-lp-text:lang(zh-Hant),
+.am-lp-text:lang(zh-TW),
+.am-lp-text:lang(zh-HK),
+.am-lp-text:lang(zh-MO) {
+  font-family: var(
+    --am-lp-font-override-zh-hant,
+    var(--am-lp-font-override, var(--am-lp-font-ui))
+  );
+}
+
+.am-lp-text:lang(ja),
+.am-lp-plaintext-row .am-lp-text:lang(ja),
+.am-lp-line-row[data-line-type="static"] .am-lp-text:lang(ja),
+.am-lp-line-row[data-line-type="credit"] .am-lp-text:lang(ja) {
+  font-family: var(
+    --am-lp-font-override-ja,
+    var(--am-lp-font-override, var(--am-lp-font-ui))
+  );
+}
+
+.am-lp-text:lang(ko) {
+  font-family: var(
+    --am-lp-font-override-ko,
+    var(--am-lp-font-override, var(--am-lp-font-ui))
+  );
+}
+
+.am-lp-text:lang(ja-Latn),
+.am-lp-text:lang(zh-Latn),
+.am-lp-text:lang(ko-Latn),
+.am-lp-text:lang(und-Latn) {
+  font-family: var(
+    --am-lp-font-override-latin,
+    var(--am-lp-font-override, var(--am-lp-font-ui))
+  );
+}
+
+/*
+ * CJK / Han-kana use --am-lp-cjk-font-weight; tiers set it equal to main.
+ * Keeping the variable lets a future custom profile diverge if needed.
+ */
+.am-lp-line-row[data-line-type="karaoke"] .am-lp-text:lang(zh),
+.am-lp-line-row[data-line-type="karaoke"] .am-lp-text:lang(und-Hani),
+.am-lp-line-row[data-line-type="karaoke"] .am-lp-text:lang(ja),
+.am-lp-line-row[data-line-type="karaoke"] .am-lp-text:lang(ko),
+.am-lp-line-row[data-line-type="line-timed"] .am-lp-text:lang(zh),
+.am-lp-line-row[data-line-type="line-timed"] .am-lp-text:lang(und-Hani),
+.am-lp-line-row[data-line-type="line-timed"] .am-lp-text:lang(ja),
+.am-lp-line-row[data-line-type="line-timed"] .am-lp-text:lang(ko),
+.am-lp-plaintext-row .am-lp-text:lang(zh),
+.am-lp-plaintext-row .am-lp-text:lang(und-Hani),
+.am-lp-plaintext-row .am-lp-text:lang(ja),
+.am-lp-plaintext-row .am-lp-text:lang(ko) {
+  font-weight: var(--am-lp-cjk-font-weight);
+}
+
+.am-lp-karaoke-binding[data-script-class="han-kana"] {
+  font-weight: var(--am-lp-cjk-font-weight);
+}
+
+.am-lp-text:lang(ja),
+.am-lp-text:lang(ko) {
+  letter-spacing: 0;
+}

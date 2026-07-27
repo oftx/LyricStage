@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LyricStage</title>
+  <style>
+    [hidden] { display: none !important; }
+    :root {
+      color-scheme: light dark;
+      --bg: #111418;
+      --fg: #f3f5f7;
+      --muted: #9aa3ad;
+      --line: #2a3138;
+      --accent: #6ea8fe;
+      --ok: #3dd68c;
+      --warn: #f0b429;
+      --card: #171b20;
+      --selected: rgba(110, 168, 254, 0.14);
+      --selected-border: rgba(110, 168, 254, 0.55);
+      --hover: rgba(255, 255, 255, 0.04);
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f7f8fa;
+        --fg: #121417;
+        --muted: #5c6670;
+        --line: #d7dde3;
+        --accent: #2f6fed;
+        --ok: #0f9d58;
+        --warn: #b78103;
+        --card: #ffffff;
+        --selected: rgba(47, 111, 237, 0.08);
+        --selected-border: rgba(47, 111, 237, 0.45);
+        --hover: rgba(0, 0, 0, 0.03);
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      max-width: 360px;
+      font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      padding: 12px;
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      font-weight: 650;
+      letter-spacing: 0.01em;
+    }
+    h2 {
+      margin: 14px 0 8px;
+      font-size: 11px;
+      font-weight: 650;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: grid;
+      gap: 6px;
+      background: var(--card);
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+    }
+    .label {
+      color: var(--muted);
+      flex: 0 0 auto;
+    }
+    .value {
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .value.wrap {
+      white-space: normal;
+      word-break: break-all;
+    }
+    .state {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      justify-content: flex-end;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex: 0 0 auto;
+    }
+    .dot.playing { background: var(--ok); }
+    .dot.buffering, .dot.paused { background: var(--warn); }
+    .dot.ended, .dot.unknown { background: var(--muted); }
+    .actions {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .actions > button {
+      appearance: none;
+      border: 0;
+      border-radius: 8px;
+      padding: 9px 10px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--accent);
+      color: white;
+    }
+    .actions > button.secondary {
+      background: transparent;
+      color: var(--fg);
+      border: 1px solid var(--line);
+    }
+    .actions > button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .switch-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .switch-row input {
+      appearance: none;
+      width: 34px; height: 20px; border-radius: 999px;
+      background: var(--line); position: relative; cursor: pointer;
+      transition: background 0.15s; margin: 0; flex: 0 0 auto;
+    }
+    .switch-row input::after {
+      content: ""; position: absolute; top: 2px; left: 2px;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #fff; transition: transform 0.15s;
+      box-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+    }
+    .switch-row input:checked { background: var(--accent); }
+    .switch-row input:checked::after { transform: translateX(14px); }
+    .hint {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .source-list {
+      display: grid;
+      gap: 8px;
+    }
+    .source-empty {
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      padding: 14px 12px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .source-item {
+      appearance: none;
+      width: 100%;
+      margin: 0;
+      text-align: left;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: var(--card);
+      color: var(--fg);
+      cursor: pointer;
+      display: grid;
+      gap: 6px;
+      font: inherit;
+      font-weight: 500;
+      transition: border-color 120ms ease, background 120ms ease;
+    }
+    .source-item:hover:not([data-selected="true"]):not([data-busy="true"]) {
+      background: var(--hover);
+      border-color: var(--selected-border);
+    }
+    .source-item:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+    .source-item[data-selected="true"] {
+      background: var(--selected);
+      border-color: var(--selected-border);
+      cursor: default;
+    }
+    .source-item[data-busy="true"] {
+      cursor: progress;
+      opacity: 0.92;
+    }
+    .source-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-width: 0;
+    }
+    .source-platform {
+      font-weight: 650;
+      font-size: 13px;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .source-badge {
+      flex: 0 0 auto;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.02em;
+      line-height: 1;
+      padding: 3px 0 3px 8px;
+    }
+    .source-media {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    .source-foot {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+    .source-foot .source-state-text {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>LyricStage</h1>
+  <div class="card" id="status-card" hidden>
+    <div class="row">
+      <span class="label">Selected</span>
+      <span class="value" id="session">—</span>
+    </div>
+    <div class="row">
+      <span class="label">Media</span>
+      <span class="value wrap" id="media">—</span>
+    </div>
+    <div class="row">
+      <span class="label">State</span>
+      <span class="value state"><span class="dot" id="state-dot"></span><span id="state">offline</span></span>
+    </div>
+    <div class="row">
+      <span class="label">Position</span>
+      <span class="value" id="position">—</span>
+    </div>
+  </div>
+
+  <h2>Playback sources</h2>
+  <div class="source-list" id="source-list" role="listbox" aria-label="Playback sources">
+    <div class="source-empty" id="source-empty">未发现音乐标签页。在支持的网站打开并播放后刷新。</div>
+  </div>
+
+  <h2>选项</h2>
+  <div class="card">
+    <label class="switch-row">
+      <span>在网页上显示歌词入口</span>
+      <input type="checkbox" id="opt-panel-handle" checked>
+    </label>
+    <label class="switch-row">
+      <span>调试信息</span>
+      <input type="checkbox" id="opt-debug">
+    </label>
+  </div>
+
+  <div class="actions">
+    <button type="button" id="open-lyrics">打开歌词窗口</button>
+    <button type="button" class="secondary" id="refresh">刷新</button>
+  </div>
+  <script src="./popup.js"></script>
+</body>
+</html>

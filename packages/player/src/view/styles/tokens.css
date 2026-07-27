@@ -1,0 +1,483 @@
+@property --am-lp-theme-foreground-channel {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 255;
+}
+
+@property --am-lp-theme-surface-channel {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 8;
+}
+
+:host {
+  --am-lp-theme-foreground-channel: 255;
+  --am-lp-theme-surface-channel: 8;
+  --am-lp-foreground-rgb: var(--am-lp-theme-foreground-channel)
+    var(--am-lp-theme-foreground-channel)
+    var(--am-lp-theme-foreground-channel);
+  --am-lp-surface-color: rgb(
+    var(--am-lp-theme-surface-channel)
+      var(--am-lp-theme-surface-channel)
+      var(--am-lp-theme-surface-channel)
+  );
+  --am-lp-theme-crossfade-duration: 1000ms;
+  --am-lp-theme-foreground-crossfade: var(--am-lp-curve-crossfade);
+  --am-lp-primary-alpha: 0.94;
+  --am-lp-secondary-alpha: 0.45;
+  --am-lp-tertiary-alpha: 0.18;
+  --am-lp-background-primary-alpha: 0.35;
+  /* Composite over the tertiary glyph base to reach the native target alpha. */
+  --am-lp-karaoke-primary-overlay-alpha: 0.926829;
+  --am-lp-karaoke-background-primary-overlay-alpha: 0.207317;
+  /* Poem-style plain lyrics: full glyph fill (not dim/unfilled karaoke base). */
+  --am-lp-plaintext-alpha: 0.94;
+  /* Track insets equal line margin + line padding at each width tier. */
+  --am-lp-content-track-inset-left: 32px;
+  --am-lp-content-track-inset-right: 32px;
+  --am-lp-content-region-left: 0;
+  --am-lp-content-region-right: 1;
+  --am-lp-line-margin-inline: 20px;
+  --am-lp-line-padding-inline: 12px;
+  --am-lp-line-padding-top: 2px;
+  --am-lp-line-padding-bottom: 10px;
+  --am-lp-line-gap: 20px;
+  --am-lp-background-lane-margin-top: 22px;
+  --am-lp-background-lane-margin-top-ja: 14px;
+  --am-lp-first-translation-margin-top: 10px;
+  --am-lp-translation-gap: 10px;
+  --am-lp-background-translation-gap: 2px;
+  --am-lp-line-radius: 16px;
+  --am-lp-line-press-inset-block: -4px;
+  --am-lp-main-size: 34px;
+  --am-lp-secondary-word-size: 22px;
+  --am-lp-background-secondary-size: 14px;
+  --am-lp-static-size: 17px;
+  /* Tighter leading for poem-like plain text (≈1.35). */
+  --am-lp-static-line-height: 23px;
+  --am-lp-translation-size: 20px;
+  --am-lp-credit-size: 22px;
+  --am-lp-credit-margin-top: 10px;
+  --am-lp-instrumental-min-height: 42px;
+  --am-lp-instrumental-host-min-height: 30px;
+  /* Fallback; live size is recalculated on .am-lp-instrumental-dot from main-size. */
+  --am-lp-instrumental-dot-size: 10px;
+  --am-lp-instrumental-dot-gap: 6px;
+  /* Dense verse spacing; stanza breaks add extra via data-section-start. */
+  --am-lp-plaintext-gap: 6px;
+  --am-lp-plaintext-stanza-gap: 14px;
+  --am-lp-plaintext-secondary-gap: 1px;
+  --am-lp-plaintext-secondary-size: 0.88em;
+  --am-lp-plaintext-secondary-line-height: 1.35;
+  --am-lp-plaintext-credit-margin-top: 18px;
+  --am-lp-plaintext-credit-size: 0.88em;
+  /* Unified: Latin / CJK / static share one CSS number (default = tier 3). */
+  --am-lp-main-font-weight: 600;
+  --am-lp-cjk-font-weight: 600;
+  --am-lp-static-font-weight: 600;
+  --am-lp-row-scale-rest: 0.98;
+  --am-lp-row-scale-active: 1;
+  /* Line fill ramp is linear (mid-move ~75ms segment); scale keeps AM move curve. */
+  --am-lp-curve-alpha: linear;
+  --am-lp-curve-scale: cubic-bezier(0.4, 0.1, 0, 1);
+  --am-lp-curve-crossfade: cubic-bezier(0, 0, 0.3, 1);
+  --am-lp-crossfade-duration: 480ms;
+  --am-lp-viewport-top-padding: 48px;
+  /* Keep a viewport fallback for browsers without container query units. The
+     component-relative value is installed on descendant layers below. */
+  --am-lp-viewport-bottom-padding: 60vh;
+  --am-lp-viewport-top-fade: 7%;
+  --am-lp-viewport-bottom-fade: 27.75%;
+  --am-lp-viewport-bottom-stop-1: 24%;
+  --am-lp-viewport-bottom-stop-2: 27.75%;
+}
+
+/*
+ * Weight tiers: one CSS number for Latin + CJK + static (no optical split).
+ * Plaintext has its own independent tier via data-plaintext-weight-tier
+ * (typography.css); this synced control never applies to the poem view.
+ * setFontWeightTier() still invalidates karaoke geometry via font layout change.
+ */
+.am-lp-root[data-font-weight-tier="1"]:not([data-display-mode="plaintext"]) {
+  --am-lp-main-font-weight: 400;
+  --am-lp-cjk-font-weight: 400;
+  --am-lp-static-font-weight: 400;
+}
+
+.am-lp-root[data-font-weight-tier="2"]:not([data-display-mode="plaintext"]) {
+  --am-lp-main-font-weight: 500;
+  --am-lp-cjk-font-weight: 500;
+  --am-lp-static-font-weight: 500;
+}
+
+.am-lp-root[data-font-weight-tier="3"]:not([data-display-mode="plaintext"]) {
+  --am-lp-main-font-weight: 600;
+  --am-lp-cjk-font-weight: 600;
+  --am-lp-static-font-weight: 600;
+}
+
+.am-lp-root[data-font-weight-tier="4"]:not([data-display-mode="plaintext"]) {
+  --am-lp-main-font-weight: 700;
+  --am-lp-cjk-font-weight: 700;
+  --am-lp-static-font-weight: 700;
+}
+
+.am-lp-root[data-font-weight-tier="5"]:not([data-display-mode="plaintext"]) {
+  --am-lp-main-font-weight: 800;
+  --am-lp-cjk-font-weight: 800;
+  --am-lp-static-font-weight: 800;
+}
+
+/* :host establishes the named size container in base.css. Older engines use
+   the runtime measurement; modern engines resolve the reserve immediately from
+   the component query height. */
+.am-lp-layer {
+  --am-lp-viewport-bottom-padding: calc(
+    var(--am-lp-component-height, 100vh) * 0.6
+  );
+}
+
+@supports (height: 1cqh) {
+  .am-lp-layer {
+    --am-lp-viewport-bottom-padding: 60cqh;
+  }
+}
+
+/* Narrow profiles change in deliberate steps. Keeping the type scale stable
+   within each band avoids continuous wrapping and karaoke-geometry churn while
+   the component is being resized. */
+@container am-lp-viewport (max-width: 599px) {
+  .am-lp-root {
+    --am-lp-content-track-inset-left: 26px;
+    --am-lp-content-track-inset-right: 26px;
+  }
+
+  .am-lp-layer {
+    --am-lp-line-margin-inline: 16px;
+    --am-lp-line-padding-inline: 10px;
+    --am-lp-line-padding-bottom: 9px;
+    --am-lp-line-gap: 17px;
+    --am-lp-background-lane-margin-top: 19px;
+    --am-lp-background-lane-margin-top-ja: 12px;
+    --am-lp-first-translation-margin-top: 8px;
+    --am-lp-translation-gap: 9px;
+    --am-lp-background-translation-gap: 2px;
+    --am-lp-main-size: 30px;
+    --am-lp-secondary-word-size: 20px;
+    --am-lp-background-secondary-size: 13px;
+    --am-lp-static-size: 16px;
+    --am-lp-static-line-height: 22px;
+    --am-lp-translation-size: 19px;
+    --am-lp-credit-size: 20px;
+    --am-lp-credit-margin-top: 9px;
+    --am-lp-instrumental-min-height: 38px;
+    --am-lp-instrumental-host-min-height: 28px;
+    --am-lp-plaintext-gap: 5px;
+    --am-lp-plaintext-stanza-gap: 12px;
+    --am-lp-plaintext-secondary-gap: 1px;
+    --am-lp-plaintext-credit-margin-top: 16px;
+    --am-lp-viewport-top-padding: 40px;
+  }
+}
+
+@container am-lp-viewport (max-width: 359px) {
+  .am-lp-root {
+    --am-lp-content-track-inset-left: 21px;
+    --am-lp-content-track-inset-right: 21px;
+  }
+
+  .am-lp-layer {
+    --am-lp-line-margin-inline: 12px;
+    --am-lp-line-padding-inline: 9px;
+    --am-lp-line-padding-bottom: 8px;
+    --am-lp-line-gap: 14px;
+    --am-lp-background-lane-margin-top: 16px;
+    --am-lp-background-lane-margin-top-ja: 10px;
+    --am-lp-first-translation-margin-top: 7px;
+    --am-lp-translation-gap: 8px;
+    --am-lp-main-size: 27px;
+    --am-lp-secondary-word-size: 18px;
+    --am-lp-background-secondary-size: 12px;
+    --am-lp-static-size: 15px;
+    --am-lp-static-line-height: 20px;
+    --am-lp-translation-size: 17px;
+    --am-lp-credit-size: 18px;
+    --am-lp-credit-margin-top: 8px;
+    --am-lp-instrumental-min-height: 34px;
+    --am-lp-instrumental-host-min-height: 26px;
+    --am-lp-plaintext-gap: 4px;
+    --am-lp-plaintext-stanza-gap: 10px;
+    --am-lp-plaintext-credit-margin-top: 14px;
+    --am-lp-viewport-top-padding: 32px;
+  }
+}
+
+@container am-lp-viewport (max-width: 279px) {
+  .am-lp-root {
+    --am-lp-content-track-inset-left: 18px;
+    --am-lp-content-track-inset-right: 18px;
+  }
+
+  .am-lp-layer {
+    --am-lp-line-margin-inline: 10px;
+    --am-lp-line-padding-inline: 8px;
+    --am-lp-line-padding-bottom: 7px;
+    --am-lp-line-gap: 12px;
+    --am-lp-background-lane-margin-top: 14px;
+    --am-lp-background-lane-margin-top-ja: 9px;
+    --am-lp-first-translation-margin-top: 6px;
+    --am-lp-translation-gap: 7px;
+    --am-lp-main-size: 24px;
+    --am-lp-secondary-word-size: 17px;
+    --am-lp-background-secondary-size: 11px;
+    --am-lp-static-size: 14px;
+    --am-lp-static-line-height: 19px;
+    --am-lp-translation-size: 16px;
+    --am-lp-credit-size: 17px;
+    --am-lp-credit-margin-top: 7px;
+    --am-lp-instrumental-min-height: 32px;
+    --am-lp-instrumental-host-min-height: 24px;
+    --am-lp-plaintext-gap: 4px;
+    --am-lp-plaintext-stanza-gap: 10px;
+    --am-lp-plaintext-credit-margin-top: 12px;
+    --am-lp-viewport-top-padding: 28px;
+  }
+}
+
+/* Manual profiles change type and vertical rhythm, while horizontal inset
+   remains container-derived. Switching profile must not move the lyric's
+   inline content edge. :where also lets the height pass below tighten spacing. */
+:where(
+    .am-lp-root[data-layout-profile="large"],
+    .am-lp-root[data-layout-profile="extra-large"]
+  )
+  .am-lp-layer {
+  --am-lp-line-padding-top: 2px;
+  --am-lp-line-padding-bottom: 12px;
+  --am-lp-line-gap: 32px;
+  --am-lp-background-lane-margin-top: 28px;
+  --am-lp-background-lane-margin-top-ja: 18px;
+  --am-lp-first-translation-margin-top: 14px;
+  --am-lp-translation-gap: 12px;
+  --am-lp-background-translation-gap: 2px;
+  --am-lp-main-size: 42px;
+  --am-lp-secondary-word-size: 26px;
+  --am-lp-background-secondary-size: 16px;
+  --am-lp-static-size: 19px;
+  --am-lp-static-line-height: 26px;
+  --am-lp-translation-size: 22px;
+  --am-lp-credit-size: 26px;
+  --am-lp-credit-margin-top: 12px;
+  --am-lp-instrumental-min-height: 50px;
+  --am-lp-instrumental-host-min-height: 34px;
+  --am-lp-plaintext-gap: 8px;
+  --am-lp-plaintext-stanza-gap: 18px;
+  --am-lp-plaintext-secondary-gap: 1px;
+  --am-lp-plaintext-credit-margin-top: 24px;
+  --am-lp-viewport-top-padding: 64px;
+}
+
+:where(.am-lp-root[data-layout-profile="extra-large"]) .am-lp-layer {
+  --am-lp-line-padding-top: 4px;
+  --am-lp-line-padding-bottom: 22px;
+  --am-lp-line-gap: 56px;
+  --am-lp-background-lane-margin-top: 44px;
+  --am-lp-background-lane-margin-top-ja: 30px;
+  --am-lp-first-translation-margin-top: 24px;
+  --am-lp-translation-gap: 18px;
+  --am-lp-background-translation-gap: 4px;
+  --am-lp-main-size: 88px;
+  --am-lp-secondary-word-size: 52px;
+  --am-lp-background-secondary-size: 30px;
+  --am-lp-static-size: 40px;
+  --am-lp-static-line-height: 52px;
+  --am-lp-translation-size: 52px;
+  --am-lp-credit-size: 52px;
+  --am-lp-credit-margin-top: 24px;
+  --am-lp-instrumental-min-height: 96px;
+  --am-lp-instrumental-host-min-height: 62px;
+  --am-lp-plaintext-gap: 12px;
+  --am-lp-plaintext-stanza-gap: 28px;
+  --am-lp-plaintext-secondary-gap: 2px;
+  --am-lp-plaintext-credit-margin-top: 36px;
+  --am-lp-viewport-top-padding: 88px;
+}
+
+:where(.am-lp-root[data-layout-profile="regular"]) .am-lp-layer {
+  --am-lp-line-padding-bottom: 10px;
+  --am-lp-line-gap: 20px;
+  --am-lp-background-lane-margin-top: 22px;
+  --am-lp-background-lane-margin-top-ja: 14px;
+  --am-lp-first-translation-margin-top: 10px;
+  --am-lp-translation-gap: 10px;
+  --am-lp-background-translation-gap: 2px;
+  --am-lp-main-size: 34px;
+  --am-lp-secondary-word-size: 22px;
+  --am-lp-background-secondary-size: 14px;
+  --am-lp-static-size: 17px;
+  --am-lp-static-line-height: 23px;
+  --am-lp-translation-size: 20px;
+  --am-lp-credit-size: 22px;
+  --am-lp-credit-margin-top: 10px;
+  --am-lp-instrumental-min-height: 42px;
+  --am-lp-instrumental-host-min-height: 30px;
+  --am-lp-plaintext-gap: 6px;
+  --am-lp-plaintext-stanza-gap: 14px;
+  --am-lp-plaintext-secondary-gap: 1px;
+  --am-lp-plaintext-credit-margin-top: 18px;
+  --am-lp-viewport-top-padding: 48px;
+}
+
+:where(
+    .am-lp-root[data-layout-profile="narrow"],
+    .am-lp-root[data-layout-profile="compact"],
+    .am-lp-root[data-layout-profile="extra-compact"]
+  )
+  .am-lp-layer {
+  --am-lp-line-padding-bottom: 9px;
+  --am-lp-line-gap: 17px;
+  --am-lp-background-lane-margin-top: 19px;
+  --am-lp-background-lane-margin-top-ja: 12px;
+  --am-lp-first-translation-margin-top: 8px;
+  --am-lp-translation-gap: 9px;
+  --am-lp-background-translation-gap: 2px;
+  --am-lp-main-size: 30px;
+  --am-lp-secondary-word-size: 20px;
+  --am-lp-background-secondary-size: 13px;
+  --am-lp-static-size: 16px;
+  --am-lp-static-line-height: 22px;
+  --am-lp-translation-size: 19px;
+  --am-lp-credit-size: 20px;
+  --am-lp-credit-margin-top: 9px;
+  --am-lp-instrumental-min-height: 38px;
+  --am-lp-instrumental-host-min-height: 28px;
+  --am-lp-plaintext-gap: 5px;
+  --am-lp-plaintext-stanza-gap: 12px;
+  --am-lp-plaintext-secondary-gap: 1px;
+  --am-lp-plaintext-credit-margin-top: 16px;
+  --am-lp-viewport-top-padding: 40px;
+}
+
+:where(
+    .am-lp-root[data-layout-profile="compact"],
+    .am-lp-root[data-layout-profile="extra-compact"]
+  )
+  .am-lp-layer {
+  --am-lp-line-padding-bottom: 8px;
+  --am-lp-line-gap: 14px;
+  --am-lp-background-lane-margin-top: 16px;
+  --am-lp-background-lane-margin-top-ja: 10px;
+  --am-lp-first-translation-margin-top: 7px;
+  --am-lp-translation-gap: 8px;
+  --am-lp-main-size: 27px;
+  --am-lp-secondary-word-size: 18px;
+  --am-lp-background-secondary-size: 12px;
+  --am-lp-static-size: 15px;
+  --am-lp-static-line-height: 20px;
+  --am-lp-translation-size: 17px;
+  --am-lp-credit-size: 18px;
+  --am-lp-credit-margin-top: 8px;
+  --am-lp-instrumental-min-height: 34px;
+  --am-lp-instrumental-host-min-height: 26px;
+  --am-lp-plaintext-gap: 4px;
+  --am-lp-plaintext-stanza-gap: 10px;
+  --am-lp-plaintext-credit-margin-top: 14px;
+  --am-lp-viewport-top-padding: 32px;
+}
+
+:where(.am-lp-root[data-layout-profile="extra-compact"]) .am-lp-layer {
+  --am-lp-line-padding-bottom: 7px;
+  --am-lp-line-gap: 12px;
+  --am-lp-background-lane-margin-top: 14px;
+  --am-lp-background-lane-margin-top-ja: 9px;
+  --am-lp-first-translation-margin-top: 6px;
+  --am-lp-translation-gap: 7px;
+  --am-lp-main-size: 24px;
+  --am-lp-secondary-word-size: 17px;
+  --am-lp-background-secondary-size: 11px;
+  --am-lp-static-size: 14px;
+  --am-lp-static-line-height: 19px;
+  --am-lp-translation-size: 16px;
+  --am-lp-credit-size: 17px;
+  --am-lp-credit-margin-top: 7px;
+  --am-lp-instrumental-min-height: 32px;
+  --am-lp-instrumental-host-min-height: 24px;
+  --am-lp-plaintext-gap: 4px;
+  --am-lp-plaintext-stanza-gap: 10px;
+  --am-lp-plaintext-credit-margin-top: 12px;
+  --am-lp-viewport-top-padding: 28px;
+}
+
+/* A short narrow player needs less vertical reserve. Keep regular desktop
+   embeddings unchanged until their height is genuinely constrained. */
+@container am-lp-viewport (max-width: 599px) and (max-height: 520px) {
+  .am-lp-layer {
+    --am-lp-viewport-top-padding: 24px;
+    --am-lp-line-padding-top: 1px;
+    --am-lp-line-padding-bottom: 6px;
+    --am-lp-line-gap: 10px;
+    --am-lp-background-lane-margin-top: 12px;
+    --am-lp-background-lane-margin-top-ja: 8px;
+    --am-lp-first-translation-margin-top: 6px;
+    --am-lp-translation-gap: 6px;
+    --am-lp-instrumental-min-height: 30px;
+    --am-lp-instrumental-host-min-height: 24px;
+    --am-lp-plaintext-gap: 4px;
+    --am-lp-plaintext-stanza-gap: 10px;
+    --am-lp-plaintext-credit-margin-top: 12px;
+  }
+}
+
+@container am-lp-viewport (min-width: 600px) and (max-height: 359px) {
+  .am-lp-layer {
+    --am-lp-viewport-top-padding: 24px;
+    --am-lp-line-padding-top: 1px;
+    --am-lp-line-padding-bottom: 6px;
+    --am-lp-line-gap: 10px;
+    --am-lp-background-lane-margin-top: 12px;
+    --am-lp-background-lane-margin-top-ja: 8px;
+    --am-lp-first-translation-margin-top: 6px;
+    --am-lp-translation-gap: 6px;
+    --am-lp-instrumental-min-height: 30px;
+    --am-lp-instrumental-host-min-height: 24px;
+    --am-lp-plaintext-gap: 4px;
+    --am-lp-plaintext-stanza-gap: 10px;
+    --am-lp-plaintext-credit-margin-top: 12px;
+  }
+}
+
+@container am-lp-viewport (max-height: 520px) {
+  :where(
+      .am-lp-root[data-layout-profile="extra-large"],
+      .am-lp-root[data-layout-profile="large"],
+      .am-lp-root[data-layout-profile="narrow"],
+      .am-lp-root[data-layout-profile="compact"],
+      .am-lp-root[data-layout-profile="extra-compact"]
+    )
+    .am-lp-layer {
+    --am-lp-viewport-top-padding: 24px;
+    --am-lp-line-padding-top: 1px;
+    --am-lp-line-padding-bottom: 6px;
+    --am-lp-line-gap: 10px;
+    --am-lp-background-lane-margin-top: 12px;
+    --am-lp-background-lane-margin-top-ja: 8px;
+    --am-lp-first-translation-margin-top: 6px;
+    --am-lp-translation-gap: 6px;
+    --am-lp-instrumental-min-height: 30px;
+    --am-lp-instrumental-host-min-height: 24px;
+    --am-lp-plaintext-gap: 4px;
+    --am-lp-plaintext-stanza-gap: 10px;
+    --am-lp-plaintext-credit-margin-top: 12px;
+  }
+}
+
+/* Forced large profiles retain their optical row separation in short
+   containers. The short-height pass may tighten internal lane spacing, but a
+   larger type profile must never end up denser than Regular. */
+:where(.am-lp-root[data-layout-profile="large"]) .am-lp-layer {
+  --am-lp-line-gap: 32px;
+}
+
+:where(.am-lp-root[data-layout-profile="extra-large"]) .am-lp-layer {
+  --am-lp-line-gap: 56px;
+}

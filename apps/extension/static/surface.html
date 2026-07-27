@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="zh-CN" data-chrome-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LyricStage · Lyrics</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0d1014;
+      --panel: #161b22;
+      --fg: #f3f5f7;
+      --muted: #9aa3ad;
+      --line: #2a3138;
+      --ok: #3dd68c;
+      --warn: #f0b429;
+      --accent: #6ea8fe;
+    }
+    html[data-chrome-theme="light"] {
+      color-scheme: light;
+      --bg: #f4f5f7;
+      --panel: #ffffff;
+      --fg: #1a1d21;
+      --muted: #5c6570;
+      --line: #d8dde3;
+      --ok: #1a9f5c;
+      --warn: #c48a00;
+      --accent: #3b6fd9;
+    }
+    * { box-sizing: border-box; }
+    /* The [hidden] attribute must always win: author display rules on a
+       class (flex/grid) silently defeat the UA's display:none — this bit us
+       three times (pip-placard, panel-chrome, and the original panel rules). */
+    [hidden] { display: none !important; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--fg);
+      font: 13px/1.4 system-ui, -apple-system, sans-serif;
+    }
+    /* Flex column, not grid: display:none children stop being grid items and
+       auto-placement then collapses tracks (the blank-panel bug class). Flex
+       simply skips hidden children. */
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    /* Header and status bar are debug chrome: hidden unless the 调试 pref is
+       on. All user-facing controls live in the floating chrome. */
+    header, .status-bar { display: none; }
+    body[data-debug="true"] header { display: block; }
+    body[data-debug="true"] .status-bar { display: grid; }
+    header, .status-bar, .settings-panel {
+      flex: none;
+      padding: 10px 12px;
+      background: color-mix(in srgb, var(--panel) 94%, transparent);
+    }
+    header { border-bottom: 1px solid var(--line); }
+    .status-bar {
+      border-top: 1px solid var(--line);
+      gap: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .status-bar strong {
+      color: var(--fg);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    h1 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 650;
+    }
+    .meta {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    main {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      background: #000;
+    }
+    html[data-chrome-theme="light"] main {
+      background: #e8eaed;
+    }
+    #player-host {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+    .overlay-empty {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      color: var(--muted);
+      padding: 24px;
+      text-align: center;
+      background: linear-gradient(180deg, rgb(0 0 0 / 35%), rgb(0 0 0 / 55%));
+      z-index: 2;
+    }
+    html[data-chrome-theme="light"] .overlay-empty {
+      background: linear-gradient(180deg, rgb(255 255 255 / 45%), rgb(255 255 255 / 65%));
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      background: var(--muted);
+      margin-right: 4px;
+    }
+    .dot.playing { background: var(--ok); }
+    .dot.buffering, .dot.paused { background: var(--warn); }
+
+    /* ------------------------------------------------ floating chrome ---- */
+    /* One glass control bar for both standalone and panel modes, floating
+       over the lyrics like the lyrics it gains from the background behind
+       it. Hidden until the pointer is over the window; reveal is hover +
+       keyboard-focus driven. NOT :focus-within on its own — a mouse click
+       leaves residual focus that would pin the bar visible after the
+       pointer leaves (surface.ts blurs buttons on pointerup for this). */
+    .float-chrome {
+      position: absolute; top: 10px; right: 10px; z-index: 7;
+      display: flex; gap: 8px; align-items: center;
+      opacity: 0; pointer-events: none;
+      transform: translateY(-4px);
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+    html[data-pointer-over="true"] .float-chrome,
+    .float-chrome:has(:focus-visible) {
+      opacity: 1; pointer-events: auto; transform: none;
+    }
+    .chrome-btn {
+      appearance: none; border: 0; margin: 0; padding: 0;
+      width: 34px; height: 34px; border-radius: 10px;
+      display: grid; place-items: center;
+      color: #fff; cursor: pointer;
+      background: rgb(255 255 255 / 14%);
+      backdrop-filter: blur(12px) saturate(1.35);
+      -webkit-backdrop-filter: blur(12px) saturate(1.35);
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    }
+    /* Light theme keeps white icons (spec): darken the glass instead. */
+    html[data-chrome-theme="light"] .chrome-btn {
+      background: rgb(0 0 0 / 30%);
+    }
+    .chrome-btn:hover { background: rgb(255 255 255 / 26%); }
+    html[data-chrome-theme="light"] .chrome-btn:hover {
+      background: rgb(0 0 0 / 42%);
+    }
+    .chrome-btn:active { transform: scale(0.93); }
+    .chrome-btn:focus-visible {
+      outline: 2px solid var(--accent); outline-offset: 2px;
+    }
+    .chrome-btn[aria-pressed="true"] {
+      background: rgb(255 255 255 / 34%);
+      box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 75%);
+    }
+    html[data-chrome-theme="light"] .chrome-btn[aria-pressed="true"] {
+      background: rgb(0 0 0 / 52%);
+      box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 85%);
+    }
+    .chrome-btn svg {
+      width: 18px; height: 18px; display: block;
+      fill: none; stroke: currentColor; stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+    .chrome-btn:disabled { opacity: 0.35; cursor: default; }
+
+    /* Pill toggles still used inside the settings panel. */
+    .toggle {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 3px 10px;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .toggle:hover:not(:disabled) {
+      color: var(--fg);
+      border-color: color-mix(in srgb, var(--fg) 35%, var(--line));
+    }
+    .toggle.is-on {
+      color: var(--fg);
+      border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+      background: color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+    .toggle:disabled { opacity: 0.35; cursor: default; }
+    .toggle[aria-pressed="true"] {
+      background: color-mix(in srgb, var(--accent, #4c8bf5) 22%, transparent);
+      border-color: color-mix(in srgb, var(--accent, #4c8bf5) 55%, transparent);
+    }
+
+    .settings-panel {
+      border-top: 1px solid var(--line);
+      display: grid;
+      gap: 10px;
+      font-size: 12px;
+      max-height: 48%;
+      overflow-y: auto;
+      /* Fullscreen/wide windows: a full-bleed sheet is unusable — cap it as
+         a card anchored under its top-right trigger once the window is wide
+         (media query below). */
+      width: 100%;
+    }
+    @media (min-width: 760px) {
+      .settings-panel {
+        width: min(100%, 640px);
+        border: 1px solid var(--line);
+        border-radius: 12px 12px 0 0;
+        border-bottom: 0;
+        /* The buttons that open these sheets sit top-RIGHT; a left/center
+           sheet visually detaches from its trigger (user feedback). */
+        align-self: flex-end;
+        margin-right: 10px;
+      }
+    }
+    .settings-row {
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+    .settings-label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .segmented {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .segment {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 4px 9px;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      min-width: 1.8em;
+    }
+    .segment:hover { color: var(--fg); }
+    .segment.is-on {
+      color: var(--fg);
+      border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+      background: color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+    .timing-controls { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .timing-stepper {
+      display: inline-flex; align-items: center; gap: 2px;
+      border: 1px solid var(--line); border-radius: 8px; padding: 2px;
+    }
+    .timing-stepper .segment { border: 0; min-width: 2em; }
+    .timing-value { font-size: 12px; opacity: 0.85; min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
+
+    /* ---------------------------------------------------- panel mode ---- */
+    body[data-panel="true"] { background: transparent; }
+    body[data-panel="true"] header,
+    body[data-panel="true"] .status-bar { display: none; }
+    /* Below the host page's grip overlay (26px, hover-revealed). */
+    body[data-panel="true"] .float-chrome { top: 34px; }
+    /* Settings float OVER the lyrics as a bounded glass sheet. As an in-flow
+       flex/grid child it squeezed main to a sliver (half the panel visually
+       clipped) and collided with the floating buttons and hint text. */
+    body[data-panel="true"] .settings-panel,
+    body[data-panel="true"] .library-panel {
+      position: absolute;
+      top: 76px; left: 8px; right: 8px;
+      max-height: calc(100% - 88px);
+      z-index: 6;
+      border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--panel) 82%, transparent);
+      backdrop-filter: blur(16px) saturate(1.2);
+      -webkit-backdrop-filter: blur(16px) saturate(1.2);
+      box-shadow: 0 8px 28px rgb(0 0 0 / 30%);
+    }
+
+    .library-list li:focus-visible {
+      outline: 2px solid var(--accent, #4c8bf5); outline-offset: 1px;
+    }
+    .debug-details { font-size: 11px; opacity: 0.7; }
+    .debug-details summary { cursor: pointer; user-select: none; }
+    .debug-details[open] { opacity: 0.9; }
+    #seek-status { margin-left: 8px; opacity: 0.8; }
+    .surface-toast {
+      position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+      z-index: 6; padding: 6px 14px; border-radius: 8px; font-size: 12px;
+      background: color-mix(in srgb, var(--fg, #fff) 12%, transparent);
+      backdrop-filter: blur(8px); opacity: 0; transition: opacity 0.2s;
+      pointer-events: none;
+    }
+    .surface-toast[data-show="true"] { opacity: 1; }
+    .lib-action[data-confirm="true"] {
+      background: #c53030; border-color: #c53030; color: #fff;
+    }
+    .pip-placard {
+      position: absolute; inset: 0; z-index: 4; display: flex;
+      align-items: center; justify-content: center; text-align: center;
+      font-size: 13px; opacity: 0.8; padding: 24px; line-height: 1.7;
+    }
+    .library-row { align-items: flex-start; }
+    .library-controls { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .library-media { font-size: 12px; opacity: 0.75; word-break: break-all; }
+    #library-search {
+      font: inherit; font-size: 12px; padding: 4px 8px; border-radius: 6px;
+      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+      background: transparent; color: inherit;
+    }
+    .library-list {
+      list-style: none; margin: 0; padding: 0; max-height: 180px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .library-list li {
+      display: flex; align-items: center; gap: 8px; padding: 4px 8px;
+      border-radius: 6px; background: color-mix(in srgb, currentColor 6%, transparent);
+      font-size: 12px; cursor: pointer;
+    }
+    .library-list li[data-active="true"] {
+      /* No ring at all — every ring variant (outline, box-shadow) left
+         corner artifacts against the row's 6px radius on某些 DPI. Selection
+         reads through tint + accent inset bar + accent text instead. */
+      background: color-mix(in srgb, var(--accent) 16%, transparent);
+      border-left: 3px solid var(--accent);
+      padding-left: 5px;
+    }
+    .library-list li[data-active="true"] .lib-title {
+      color: var(--accent);
+      font-weight: 650;
+    }
+    .library-list li .lib-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .library-list li .lib-badge { opacity: 0.6; font-size: 11px; }
+    .library-list li .lib-action {
+      font: inherit; font-size: 11px; padding: 2px 6px; border-radius: 4px;
+      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+      background: transparent; color: inherit; cursor: pointer; flex-shrink: 0;
+    }
+    .library-import { display: flex; flex-direction: column; gap: 6px; }
+    .library-import input, .library-import textarea {
+      font: inherit; font-size: 12px; padding: 4px 8px; border-radius: 6px;
+      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+      background: transparent; color: inherit; resize: vertical;
+    }
+    .library-actions { display: flex; gap: 8px; align-items: center; }
+    .library-status { font-size: 12px; opacity: 0.75; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>歌词窗口</h1>
+    <div class="meta">
+      <span id="connection">连接中…</span>
+    </div>
+  </header>
+  <main>
+    <div id="player-host" aria-label="Lyrics"></div>
+    <div class="overlay-empty" id="empty">等待播放会话…</div>
+    <div class="surface-toast" id="surface-toast" role="status" aria-live="polite"></div>
+    <div class="pip-placard" id="pip-placard" hidden>歌词已移至画中画窗口<br>设置仍在本窗口 · 关闭本窗口将同时关闭画中画</div>
+    <div class="float-chrome" id="float-chrome" role="group" aria-label="歌词控制">
+      <button type="button" class="chrome-btn" id="toggle-translation" hidden aria-pressed="false" title="翻译">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+      </button>
+      <button type="button" class="chrome-btn" id="toggle-pronunciation" hidden aria-pressed="false" title="发音">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><text x="3" y="19" font-size="15" font-weight="700" fill="currentColor" stroke="none" font-family="system-ui, sans-serif">あ</text><text x="14" y="9" font-size="9" font-weight="700" fill="currentColor" stroke="none" font-family="system-ui, sans-serif">a</text></svg>
+      </button>
+      <button type="button" class="chrome-btn" id="toggle-library" aria-pressed="false" aria-controls="library-panel" title="歌词库">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7"/><path d="M9 11h7"/></svg>
+      </button>
+      <button type="button" class="chrome-btn" id="toggle-pip" aria-pressed="false" title="画中画">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10c0 1.1.9 2 2 2h4"/><rect x="12" y="13" width="10" height="7" rx="2"/></svg>
+      </button>
+      <button type="button" class="chrome-btn" id="toggle-fullscreen" aria-pressed="false" title="全屏">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+      </button>
+      <button type="button" class="chrome-btn" id="toggle-settings" aria-pressed="false" aria-controls="settings-panel" title="设置">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>
+      </button>
+    </div>
+  </main>
+  <section class="settings-panel" id="settings-panel" hidden aria-label="Display settings">
+    <div class="settings-row">
+      <span class="settings-label">字重</span>
+      <div class="segmented" id="pref-font-weight" role="group" aria-label="字重档位"></div>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">字号</span>
+      <div class="segmented" id="pref-layout-profile" role="group" aria-label="字号档位"></div>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">展示</span>
+      <div class="segmented" role="group" aria-label="歌词展示模式">
+        <button type="button" class="segment" data-display-mode="plaintext">文本</button>
+        <button type="button" class="segment" data-display-mode="lrc">整行</button>
+        <button type="button" class="segment" data-display-mode="karaoke">逐字</button>
+      </div>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">背景</span>
+      <div class="segmented" role="group" aria-label="背景模式">
+        <button type="button" class="segment" data-background-mode="solid">纯色</button>
+        <button type="button" class="segment" data-background-mode="cover">封面</button>
+      </div>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">主题</span>
+      <div class="segmented" role="group" aria-label="主题">
+        <button type="button" class="segment" data-pref-theme="light">浅色</button>
+        <button type="button" class="segment" data-pref-theme="dark">深色</button>
+        <button type="button" class="segment" data-pref-theme="system">系统</button>
+      </div>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">校准</span>
+      <div class="timing-controls">
+        <div class="timing-stepper" role="group" aria-label="歌词时序偏移">
+          <button type="button" class="segment" id="timing-offset-minus" aria-label="提前 0.1 秒">−</button>
+          <span class="timing-value" id="timing-offset-value" aria-live="polite">0.0s</span>
+          <button type="button" class="segment" id="timing-offset-plus" aria-label="延后 0.1 秒">+</button>
+        </div>
+        <button type="button" class="toggle" id="timing-offset-global" aria-pressed="false" title="以当前值作为本网站所有歌词的默认校准">全局</button>
+        <button type="button" class="toggle" id="timing-offset-reset">重置</button>
+      </div>
+    </div>
+  </section>
+  <section class="settings-panel library-panel" id="library-panel" hidden aria-label="歌词库">
+    <div class="settings-row library-row">
+      <span class="settings-label">歌词库</span>
+      <div class="library-controls">
+        <div class="library-media" id="library-media">—</div>
+        <input type="search" id="library-search" placeholder="搜索标题 / 创作者 / 别名" aria-label="搜索歌词库">
+        <ul class="library-list" id="library-list" aria-label="歌词库条目"></ul>
+        <div class="library-actions">
+          <button type="button" class="toggle" id="library-ignore" aria-pressed="false">忽略本媒体</button>
+          <button type="button" class="toggle" id="library-automatch" aria-pressed="true">自动匹配</button>
+          <button type="button" class="toggle" id="library-import">导入 LRC</button>
+        </div>
+        <div class="library-import" id="library-edit-panel" hidden>
+          <input type="text" id="library-edit-title" placeholder="标题" aria-label="编辑标题">
+          <input type="text" id="library-edit-creators" placeholder="创作者（/ 分隔）" aria-label="编辑创作者">
+          <input type="text" id="library-edit-title-aliases" placeholder="标题别名（/ 分隔，参与匹配）" aria-label="标题别名">
+          <input type="text" id="library-edit-creator-aliases" placeholder="创作者别名（/ 分隔）" aria-label="创作者别名">
+          <textarea id="library-edit-text" rows="8" placeholder="歌词正文" aria-label="歌词正文"></textarea>
+          <textarea id="library-edit-translation" rows="4" placeholder="翻译 LRC（可选）" aria-label="翻译 LRC"></textarea>
+          <div class="library-actions">
+            <button type="button" class="toggle" id="library-edit-save">保存</button>
+            <button type="button" class="toggle" id="library-edit-cancel">取消</button>
+            <span class="library-status" id="library-edit-status" role="status" aria-live="polite"></span>
+          </div>
+        </div>
+        <div class="library-import" id="library-import-panel" hidden>
+          <input type="text" id="library-import-title" placeholder="标题" aria-label="歌词标题">
+          <input type="text" id="library-import-creators" placeholder="创作者（/ 分隔）" aria-label="创作者">
+          <textarea id="library-import-text" rows="6" placeholder="[00:12.34] 歌词…" aria-label="LRC 正文"></textarea>
+          <textarea id="library-import-translation" rows="3" placeholder="翻译 LRC（可选）" aria-label="翻译 LRC"></textarea>
+          <div class="library-actions">
+            <button type="button" class="toggle" id="library-import-save">保存并使用</button>
+            <span class="library-status" id="library-import-status" role="status" aria-live="polite"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <div class="status-bar" id="live" hidden>
+    <div>
+      <span class="dot" id="state-dot"></span>
+      <strong id="state">paused</strong>
+      · <strong id="clock">0:00.000</strong>
+      <span id="seek-status" role="status" aria-live="polite"></span>
+    </div>
+    <details class="debug-details">
+      <summary>调试信息</summary>
+      <div>rate <strong id="rate">1.00×</strong> · age <strong id="age">—</strong></div>
+      <div>media <strong id="media">—</strong></div>
+      <div>session <strong id="session">—</strong>
+        · gen <strong id="generation">—</strong>
+        · seq <strong id="sequence">—</strong>
+      </div>
+    </details>
+  </div>
+  <script src="./surface.js"></script>
+</body>
+</html>

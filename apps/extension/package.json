@@ -1,0 +1,28 @@
+{
+  "name": "@lyric-stage/extension",
+  "version": "0.0.0",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "build": "node ../../scripts/clean-package-dist.mjs && node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@lyric-stage/diagnostics": "workspace:*",
+    "@lyric-stage/extension-protocol": "workspace:*",
+    "@lyric-stage/platform-adapters": "workspace:*",
+    "@lyric-stage/playback-core": "workspace:*",
+    "@lyric-stage/player": "workspace:*",
+    "@lyric-stage/storage": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.31",
+    "jsdom": "^27.4.0",
+    "typescript": "^5.9.2",
+    "vite": "^8.1.4",
+    "vitest": "^3.2.4"
+  },
+  "author": "oftx"
+}

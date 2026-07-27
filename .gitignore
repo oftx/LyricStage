@@ -1,0 +1,18 @@
+# Node / pnpm
+node_modules/
+.pnpm-store/
+.vite/
+*.tsbuildinfo
+
+# Build outputs
+/packages/*/dist/
+/apps/*/dist/
+
+# Extension Private Keys & Artifacts
+dist.pem
+dist.crx
+
+# OS & Logs
+.DS_Store
+*.log
+.tmp/

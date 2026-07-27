@@ -1,0 +1,726 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  container-name: am-lp-viewport;
+  container-type: size;
+  color: rgb(var(--am-lp-foreground-rgb) / var(--am-lp-primary-alpha));
+  font-family: var(
+    --am-lp-font-ui,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif
+  );
+  font-synthesis: none;
+  letter-spacing: 0;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.am-lp-root {
+  --am-lp-foreground-rgb: var(--am-lp-theme-foreground-channel)
+    var(--am-lp-theme-foreground-channel)
+    var(--am-lp-theme-foreground-channel);
+  --am-lp-surface-color: rgb(
+    var(--am-lp-theme-surface-channel)
+      var(--am-lp-theme-surface-channel)
+      var(--am-lp-theme-surface-channel)
+  );
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  color: rgb(var(--am-lp-foreground-rgb) / var(--am-lp-primary-alpha));
+  isolation: isolate;
+  contain: style paint;
+  container-type: inline-size;
+  transition:
+    --am-lp-theme-foreground-channel var(--am-lp-theme-crossfade-duration)
+      var(--am-lp-theme-foreground-crossfade),
+    --am-lp-theme-surface-channel var(--am-lp-theme-crossfade-duration)
+      var(--am-lp-curve-crossfade);
+}
+
+.am-lp-root[data-active="false"] {
+  pointer-events: none;
+}
+
+.am-lp-root[data-active="false"],
+.am-lp-root[data-active="false"] *,
+.am-lp-root[data-active="false"] *::before,
+.am-lp-root[data-active="false"] *::after {
+  transition-duration: 0ms !important;
+  transition-delay: 0ms !important;
+  animation: none !important;
+}
+
+.am-lp-root[data-background-artwork="none"][data-background-appearance="dark"] {
+  --am-lp-theme-foreground-channel: 255;
+  --am-lp-theme-surface-channel: 0;
+}
+
+.am-lp-root[data-background-artwork="none"][data-background-appearance="light"] {
+  --am-lp-theme-foreground-channel: 0;
+  --am-lp-theme-surface-channel: 255;
+}
+
+.am-lp-artwork-background {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  background: var(--am-lp-surface-color);
+  pointer-events: none;
+}
+
+.am-lp-artwork-background-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--am-lp-surface-color);
+  pointer-events: none;
+}
+
+.am-lp-root[data-surface-mode="transparent"] .am-lp-artwork-background {
+  display: none;
+  background: transparent;
+}
+
+.am-lp-artwork-background-previous {
+  opacity: 0;
+}
+
+.am-lp-panel,
+.am-lp-layer {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+.am-lp-panel {
+  z-index: 1;
+  mix-blend-mode: normal;
+}
+
+.am-lp-root[data-sheet-composite="add"] .am-lp-panel {
+  mix-blend-mode: plus-lighter;
+}
+
+.am-lp-layer {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+  scrollbar-width: none;
+  opacity: 0;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0,
+    #000 var(--am-lp-viewport-top-fade),
+    #000 calc(100% - var(--am-lp-viewport-bottom-fade)),
+    rgb(0 0 0 / 0.05)
+      calc(
+        100% - var(--am-lp-viewport-bottom-fade) +
+          var(--am-lp-viewport-bottom-stop-1)
+      ),
+    transparent
+      calc(
+        100% - var(--am-lp-viewport-bottom-fade) +
+          var(--am-lp-viewport-bottom-stop-2)
+      ),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    transparent 0,
+    #000 var(--am-lp-viewport-top-fade),
+    #000 calc(100% - var(--am-lp-viewport-bottom-fade)),
+    rgb(0 0 0 / 0.05)
+      calc(
+        100% - var(--am-lp-viewport-bottom-fade) +
+          var(--am-lp-viewport-bottom-stop-1)
+      ),
+    transparent
+      calc(
+        100% - var(--am-lp-viewport-bottom-fade) +
+          var(--am-lp-viewport-bottom-stop-2)
+      ),
+    transparent 100%
+  );
+  mask-mode: alpha;
+}
+
+.am-lp-layer::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.am-lp-layer[data-layer-active="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.am-lp-rows {
+  --am-lp-content-track-width: max(
+    0px,
+    calc(
+      100% - var(--am-lp-content-track-inset-left) -
+        var(--am-lp-content-track-inset-right)
+    )
+  );
+  --am-lp-content-region-span: calc(
+    var(--am-lp-content-region-right) - var(--am-lp-content-region-left)
+  );
+  width: calc(
+    var(--am-lp-content-track-inset-left) +
+      var(--am-lp-content-track-inset-right) +
+      var(--am-lp-content-region-span) * var(--am-lp-content-track-width)
+  );
+  min-width: 0;
+  margin-left: calc(
+    var(--am-lp-content-region-left) *
+      var(--am-lp-content-track-width)
+  );
+  padding-block: var(--am-lp-viewport-top-padding)
+    var(--am-lp-viewport-bottom-padding);
+}
+
+.am-lp-line-row {
+  --am-lp-row-scale: var(--am-lp-row-scale-rest);
+  --am-lp-line-width: 1;
+  /* Fallback when no move timing: short pre-hold, 90ms linear, longer post-hold. */
+  --am-lp-alpha-delay: 75ms;
+  --am-lp-alpha-duration: 90ms;
+  --am-lp-scale-delay: 0ms;
+  --am-lp-scale-duration: 350ms;
+  position: relative;
+  width: fit-content;
+  max-width: calc(
+    (100% - 2 * var(--am-lp-line-margin-inline)) *
+      var(--am-lp-line-width)
+  );
+  margin-block: 0 var(--am-lp-line-gap);
+  margin-right: auto;
+  margin-left: var(--am-lp-line-margin-inline);
+  padding-block: var(--am-lp-line-padding-top)
+    var(--am-lp-line-padding-bottom);
+  /* Trailing slack: fit-content uses advance widths; bold Latin terminals and
+     rest→active scale (0.98→1) ink past that edge. Ancestor overflow-x/mask
+     then looks like end-of-line clipping after a font-size upscale. */
+  padding-inline: var(--am-lp-line-padding-inline)
+    calc(var(--am-lp-line-padding-inline) + 0.35em);
+  overflow: visible;
+  color: rgb(var(--am-lp-foreground-rgb));
+  font-size: var(--am-lp-main-size);
+  font-weight: var(--am-lp-main-font-weight);
+  line-height: normal;
+  letter-spacing: 0;
+  text-align: left;
+  scale: var(--am-lp-row-scale);
+  transform-origin: left top;
+  cursor: default;
+  isolation: isolate;
+}
+
+.am-lp-line-row::after,
+.am-lp-plaintext-row::after {
+  position: absolute;
+  z-index: 0;
+  inset: var(--am-lp-line-press-inset-block) 0;
+  border-radius: var(--am-lp-line-radius);
+  background: rgb(var(--am-lp-foreground-rgb) / 0.08);
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 100ms var(--am-lp-curve-alpha);
+}
+
+.am-lp-line-row > *,
+.am-lp-plaintext-row > * {
+  position: relative;
+  z-index: 1;
+}
+
+.am-lp-line-row[data-pressing="true"]::after,
+.am-lp-plaintext-row[data-pressing="true"]::after {
+  opacity: 1;
+}
+
+.am-lp-line-row[data-line-type="credit"] {
+  cursor: default;
+}
+
+.am-lp-line-row[data-seekable="true"],
+.am-lp-plaintext-row[data-seekable="true"] {
+  cursor: pointer;
+}
+
+.am-lp-line-row[data-seekable="true"]:focus-visible,
+.am-lp-plaintext-row[data-seekable="true"]:focus-visible {
+  border-radius: var(--am-lp-line-radius);
+  outline: 2px solid rgb(var(--am-lp-foreground-rgb) / 0.72);
+  outline-offset: 2px;
+}
+
+.am-lp-line-row[data-agent-side="end"] {
+  margin-right: var(--am-lp-line-margin-inline);
+  margin-left: auto;
+  /* Scale origin is the reading-end edge; put glyph slack on that side. */
+  padding-inline: calc(var(--am-lp-line-padding-inline) + 0.35em)
+    var(--am-lp-line-padding-inline);
+  text-align: right;
+  transform-origin: right top;
+}
+
+/* CJK rows previously zeroed this margin ("native line-box leading is
+   enough") — in practice the translation sat almost flush under the primary
+   (user report). Match the primary's own wrapped-line rhythm instead: the
+   visual gap ≈ primary leading, so scale with the main font size. */
+.am-lp-line-row[data-primary-script="han"],
+.am-lp-line-row[data-primary-script="ja"],
+.am-lp-line-row[data-primary-script="ko"] {
+  --am-lp-first-translation-margin-top: calc(var(--am-lp-main-size) * 0.22);
+}
+
+.am-lp-line-row[data-primary-script="ja"] {
+  --am-lp-background-lane-margin-top:
+    var(--am-lp-background-lane-margin-top-ja);
+}
+
+.am-lp-line-row[data-visual-state="active"],
+.am-lp-line-row[data-visual-state="focus"] {
+  --am-lp-row-scale: var(--am-lp-row-scale-active);
+  /* Activate fallback: 90ms linear mid-window (see controller handoff). */
+  --am-lp-alpha-delay: 75ms;
+  --am-lp-alpha-duration: 90ms;
+  --am-lp-scale-delay: 0ms;
+  --am-lp-scale-duration: 500ms;
+}
+
+.am-lp-line-row[data-transition-role="deactivate"] {
+  /* Deactivate: same short linear fill-out profile. */
+  --am-lp-alpha-delay: 75ms;
+  --am-lp-alpha-duration: 90ms;
+}
+
+.am-lp-line-row[data-transition-role="terminal-exit"] {
+  --am-lp-alpha-delay: 0ms;
+  --am-lp-alpha-duration: 90ms;
+  --am-lp-scale-delay: 0ms;
+  --am-lp-scale-duration: 350ms;
+}
+
+/* Karaoke paints its visible glyphs through an aria-hidden mask layer. Keep a
+   real text node in the row's accessibility tree without affecting layout. */
+.am-lp-accessible-text {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
+
+.am-lp-line-row[data-animate="true"] {
+  transition: scale var(--am-lp-scale-duration) var(--am-lp-curve-scale)
+    var(--am-lp-scale-delay);
+}
+
+/* FLIP owns geometry; CSS transitions would fight WAAPI translate. */
+.am-lp-line-row[data-motion-owner="row-move"] {
+  transition: none;
+}
+
+.am-lp-line-primary,
+.am-lp-line-pronunciation,
+.am-lp-line-background {
+  display: block;
+  overflow: visible;
+  color: rgb(var(--am-lp-foreground-rgb));
+  opacity: var(--am-lp-tertiary-alpha);
+}
+
+.am-lp-line-primary[data-tone="primary"],
+.am-lp-line-pronunciation[data-tone="primary"] {
+  opacity: var(--am-lp-primary-alpha);
+}
+
+.am-lp-line-background[data-tone="primary"],
+.am-lp-line-background-pronunciation[data-tone="primary"] {
+  opacity: var(--am-lp-background-primary-alpha);
+}
+
+.am-lp-line-primary[data-tone="secondary"],
+.am-lp-line-pronunciation[data-tone="secondary"] {
+  opacity: var(--am-lp-secondary-alpha);
+}
+
+.am-lp-line-background[data-tone="secondary"],
+.am-lp-line-background-pronunciation[data-tone="secondary"] {
+  opacity: var(--am-lp-secondary-alpha);
+}
+
+.am-lp-line-row[data-animate="true"] > .am-lp-line-primary,
+.am-lp-line-row[data-animate="true"] > .am-lp-line-pronunciation {
+  transition: opacity var(--am-lp-alpha-duration) var(--am-lp-curve-alpha)
+    var(--am-lp-alpha-delay);
+}
+
+/* Full-line (untimed, row-owned) pronunciation never lights up — row-view
+   pins it to tertiary tone (mistimed brightening read badly; user opted for
+   a static ruby line, like the translation). No transition rule needed. */
+
+.am-lp-line-row[data-animate="true"] .am-lp-line-background,
+.am-lp-line-row[data-animate="true"] .am-lp-line-background-pronunciation {
+  transition: opacity var(--am-lp-alpha-duration) var(--am-lp-curve-alpha)
+    var(--am-lp-alpha-delay);
+}
+
+.am-lp-foreground-secondary-lane {
+  --am-lp-secondary-lane-margin-top: 0px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  height: auto;
+  margin-top: 0;
+  overflow: visible;
+  opacity: 1;
+  scale: 1;
+  transform-origin: left top;
+  visibility: visible;
+}
+
+.am-lp-line-row[data-agent-side="end"] .am-lp-foreground-secondary-lane {
+  align-items: flex-end;
+  margin-left: auto;
+  transform-origin: right top;
+}
+
+.am-lp-line-pronunciation {
+  margin-top: 0;
+  font-size: var(--am-lp-translation-size);
+}
+
+.am-lp-foreground-secondary-lane > .am-lp-line-translation,
+.am-lp-line-translation {
+  margin-top: var(--am-lp-translation-gap);
+  font-size: var(--am-lp-translation-size);
+}
+
+/* Browser CJK line boxes already contribute more leading than the native
+   TextViews. Remove the extra margin when translation follows the main line. */
+.am-lp-line-primary + .am-lp-line-translation,
+.am-lp-line-pronunciation[hidden] + .am-lp-line-translation,
+.am-lp-foreground-secondary-lane > .am-lp-line-translation:first-child,
+.am-lp-foreground-secondary-lane
+  > .am-lp-line-pronunciation[hidden]
+  + .am-lp-line-translation {
+  margin-top: var(--am-lp-first-translation-margin-top);
+}
+
+.am-lp-line-translation {
+  display: block;
+  color: rgb(var(--am-lp-foreground-rgb) / var(--am-lp-tertiary-alpha));
+  /* The translation's own wrapped lines stay compact — only the gap to the
+     primary text follows the primary's line rhythm. */
+  line-height: 1.3;
+}
+
+.am-lp-background-lane {
+  --am-lp-secondary-lane-margin-top: var(
+    --am-lp-background-lane-margin-top
+  );
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  height: auto;
+  margin-top: var(--am-lp-background-lane-margin-top);
+  overflow: visible;
+  opacity: 1;
+  scale: 1;
+  transform-origin: left bottom;
+  visibility: visible;
+}
+
+.am-lp-line-row[data-agent-side="end"] .am-lp-background-lane {
+  align-items: flex-end;
+  margin-left: auto;
+  transform-origin: right bottom;
+}
+
+.am-lp-foreground-secondary-lane[data-lane-visual="collapsed"],
+.am-lp-foreground-secondary-lane[data-lane-visual="none"],
+.am-lp-background-lane[data-lane-visual="collapsed"],
+.am-lp-background-lane[data-lane-visual="none"] {
+  height: 0;
+  margin-top: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  scale: 0.9;
+  visibility: hidden;
+}
+
+.am-lp-foreground-secondary-lane[data-lane-visual="expanding"],
+.am-lp-foreground-secondary-lane[data-lane-visual="collapsing"],
+.am-lp-background-lane[data-lane-visual="expanding"],
+.am-lp-background-lane[data-lane-visual="collapsing"] {
+  overflow: hidden;
+  visibility: visible;
+}
+
+.am-lp-line-background {
+  max-width: 100%;
+  font-size: var(--am-lp-secondary-word-size);
+}
+
+.am-lp-line-background-pronunciation {
+  margin-top: 0;
+  font-size: var(--am-lp-background-secondary-size);
+}
+
+.am-lp-line-background-translation {
+  margin-top: var(--am-lp-background-translation-gap);
+  font-size: var(--am-lp-background-secondary-size);
+}
+
+.am-lp-line-row[data-line-type="credit"] {
+  margin-top: var(--am-lp-credit-margin-top);
+  font-size: var(--am-lp-credit-size);
+  font-weight: var(--am-lp-static-font-weight);
+}
+
+.am-lp-line-row[data-line-type="static"] {
+  font-size: var(--am-lp-static-size);
+  font-weight: var(--am-lp-static-font-weight);
+  line-height: var(--am-lp-static-line-height);
+}
+
+.am-lp-instrumental-row {
+  --am-lp-line-width: 1;
+  --am-lp-instrumental-alpha: 0;
+  --am-lp-instrumental-scale: 1;
+  width: fit-content;
+  max-width: calc(100% * var(--am-lp-line-width));
+  min-height: var(--am-lp-instrumental-min-height);
+  margin: 0 auto var(--am-lp-line-gap) var(--am-lp-line-margin-inline);
+  padding-block: var(--am-lp-line-padding-top)
+    var(--am-lp-line-padding-bottom);
+  padding-inline: var(--am-lp-line-padding-inline);
+  transform-origin: left center;
+}
+
+.am-lp-instrumental-row[data-agent-side="end"] {
+  margin-right: var(--am-lp-line-margin-inline);
+  margin-left: auto;
+  transform-origin: right center;
+}
+
+/* Tight box around the three dots; scale origin 50% 50% = geometric center. */
+.am-lp-instrumental-scale-host {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--am-lp-instrumental-host-min-height);
+  /* Peak outer-edge flush is applied as a runtime rest inset on this host. */
+  opacity: var(--am-lp-instrumental-alpha);
+  scale: var(--am-lp-instrumental-scale);
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+}
+
+.am-lp-instrumental-dot-chain {
+  /* Gap tokens resolve on each dot from local main-size (layout profile). */
+  --am-lp-instrumental-dot-gap: calc(var(--am-lp-main-size) * 0.175);
+  display: inline-flex;
+  align-items: center;
+  /* Layout alignment only; keep separate from the geometric-center scale host. */
+  margin-inline-start: calc(0px - var(--am-lp-instrumental-dot-gap));
+}
+
+.am-lp-instrumental-row[data-agent-side="end"] .am-lp-instrumental-dot-chain {
+  margin-inline-start: 0;
+  margin-inline-end: calc(0px - var(--am-lp-instrumental-dot-gap));
+}
+
+.am-lp-instrumental-dot {
+  --am-lp-instrumental-dot-alpha: 0;
+  --am-lp-instrumental-dot-tint: 0;
+  /* Resolve against local --am-lp-main-size (layout profile lives on layer). */
+  --am-lp-instrumental-dot-size: calc(var(--am-lp-main-size) * 0.29);
+  --am-lp-instrumental-dot-gap: calc(var(--am-lp-main-size) * 0.175);
+  display: block;
+  width: var(--am-lp-instrumental-dot-size);
+  height: var(--am-lp-instrumental-dot-size);
+  flex: 0 0 var(--am-lp-instrumental-dot-size);
+  margin-right: var(--am-lp-instrumental-dot-gap);
+  border-radius: 50%;
+  background: rgb(
+    var(--am-lp-foreground-rgb) /
+      calc(
+        var(--am-lp-tertiary-alpha) +
+          (var(--am-lp-primary-alpha) - var(--am-lp-tertiary-alpha)) *
+          var(--am-lp-instrumental-dot-tint)
+      )
+  );
+  opacity: var(--am-lp-instrumental-dot-alpha);
+}
+
+.am-lp-instrumental-dot:first-child {
+  margin-left: var(--am-lp-instrumental-dot-gap);
+}
+
+.am-lp-instrumental-dot:last-child {
+  margin-right: 0;
+}
+
+.am-lp-plaintext-row {
+  position: relative;
+  max-width: calc(100% - 2 * var(--am-lp-line-margin-inline));
+  /* Match text-row box: gap + line-height so empty poem lines align. */
+  min-height: var(--am-lp-static-line-height);
+  margin: 0 var(--am-lp-line-margin-inline) var(--am-lp-plaintext-gap);
+  padding-block: 0;
+  padding-inline: var(--am-lp-line-padding-inline);
+  /* Full glyph fill — poem reading, not karaoke unfilled base. */
+  color: rgb(var(--am-lp-foreground-rgb) / var(--am-lp-plaintext-alpha));
+  font-size: var(--am-lp-static-size);
+  font-weight: var(--am-lp-static-font-weight);
+  line-height: var(--am-lp-static-line-height);
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+  cursor: default;
+  isolation: isolate;
+}
+
+/* Empty poem rows: identical box to a text row (nbsp primary holds line box). */
+.am-lp-plaintext-row[data-empty="true"] {
+  min-height: var(--am-lp-static-line-height);
+}
+
+.am-lp-plaintext-row[data-empty="true"] .am-lp-plaintext-primary {
+  /* Keep layout contribution; hide glyph only. */
+  color: transparent;
+  user-select: none;
+}
+
+/*
+ * Synced-layer empty spacers (TTML section breaks / blank <p>).
+ * Match a main lyric row box, not the smaller static credit metrics — otherwise
+ * section gaps look "missing" next to line-timed / karaoke lines.
+ */
+.am-lp-line-row[data-empty="true"] {
+  min-height: calc(
+    var(--am-lp-main-size) + var(--am-lp-line-padding-top) +
+      var(--am-lp-line-padding-bottom)
+  );
+  font-size: var(--am-lp-main-size);
+  line-height: normal;
+}
+
+.am-lp-plaintext-row[data-line-type="credit"] {
+  cursor: default;
+}
+
+.am-lp-plaintext-primary,
+.am-lp-plaintext-background,
+.am-lp-plaintext-pronunciation,
+.am-lp-plaintext-translation {
+  display: block;
+}
+
+/* Primary text inherits full poem fill from the row. */
+.am-lp-plaintext-primary {
+  color: inherit;
+  opacity: 1;
+}
+
+.am-lp-plaintext-background,
+.am-lp-plaintext-pronunciation,
+.am-lp-plaintext-translation {
+  margin-top: var(--am-lp-plaintext-secondary-gap);
+  color: rgb(var(--am-lp-foreground-rgb) / var(--am-lp-secondary-alpha));
+  font-size: var(--am-lp-plaintext-secondary-size);
+  line-height: var(--am-lp-plaintext-secondary-line-height);
+}
+
+.am-lp-plaintext-row[data-line-type="credit"] {
+  margin-top: var(--am-lp-plaintext-credit-margin-top);
+  color: rgb(var(--am-lp-foreground-rgb) / var(--am-lp-secondary-alpha));
+  font-size: var(--am-lp-plaintext-credit-size);
+}
+
+/* Safety: static rows left in the synced layer stay fully filled (no dim base). */
+.am-lp-line-row[data-line-type="static"] > .am-lp-line-primary {
+  opacity: var(--am-lp-primary-alpha);
+}
+
+.am-lp-root[data-reduced-motion="true"],
+.am-lp-root[data-reduced-motion="true"] .am-lp-layer,
+.am-lp-root[data-reduced-motion="true"] .am-lp-line-row,
+.am-lp-root[data-reduced-motion="true"] .am-lp-line-row::after,
+.am-lp-root[data-reduced-motion="true"] .am-lp-plaintext-row::after,
+.am-lp-root[data-reduced-motion="true"] .am-lp-line-primary,
+.am-lp-root[data-reduced-motion="true"] .am-lp-line-pronunciation,
+.am-lp-root[data-reduced-motion="true"] .am-lp-line-background,
+.am-lp-root[data-reduced-motion="true"]
+  .am-lp-line-background-pronunciation,
+.am-lp-root[data-reduced-motion="true"] .am-lp-background-lane {
+  transition-duration: 0ms !important;
+  transition-delay: 0ms !important;
+}
+
+@media (forced-colors: active) {
+  .am-lp-root,
+  .am-lp-artwork-background {
+    background: Canvas;
+  }
+
+  .am-lp-artwork-background-canvas {
+    display: none;
+  }
+
+  .am-lp-root[data-surface-mode="transparent"],
+  .am-lp-root[data-surface-mode="transparent"] .am-lp-artwork-background {
+    background: transparent !important;
+  }
+
+  .am-lp-panel,
+  .am-lp-root[data-sheet-composite="add"] .am-lp-panel {
+    mix-blend-mode: normal;
+  }
+
+  .am-lp-layer {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}

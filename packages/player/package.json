@@ -1,0 +1,29 @@
+{
+  "name": "@lyric-stage/player",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "generate:styles": "node ../../scripts/generate-player-styles.mjs",
+    "build": "pnpm run generate:styles && node ../../scripts/clean-package-dist.mjs && tsc -p tsconfig.build.json",
+    "typecheck": "pnpm run generate:styles && tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  },
+  "author": "oftx"
+}

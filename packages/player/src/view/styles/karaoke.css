@@ -1,0 +1,205 @@
+.am-lp-line-primary[data-renderer="karaoke"],
+.am-lp-line-pronunciation[data-renderer="karaoke"],
+.am-lp-line-background[data-renderer="karaoke"] {
+  opacity: 1;
+}
+
+.am-lp-karaoke-track {
+  display: block;
+  min-width: 0;
+  color: rgb(var(--am-lp-foreground-rgb) / var(--am-lp-tertiary-alpha));
+  white-space: normal;
+}
+
+.am-lp-karaoke-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  max-width: 100%;
+  white-space: normal;
+}
+
+.am-lp-line-row[data-agent-side="end"] .am-lp-karaoke-group {
+  justify-content: flex-end;
+}
+
+.am-lp-karaoke-word {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.am-lp-karaoke-word[data-character-wrap="true"] {
+  display: contents;
+}
+
+.am-lp-karaoke-binding {
+  --am-lp-karaoke-line-mix: 0;
+  --am-lp-karaoke-mask-width: 100%;
+  --am-lp-karaoke-mask-offset-x: 0px;
+  --am-lp-karaoke-mask-a: 0;
+  --am-lp-karaoke-mask-b: 0;
+  --am-lp-karaoke-mask-c: 0;
+  --am-lp-karaoke-mask-d: 0;
+  --am-lp-karaoke-stop-b: 0;
+  --am-lp-karaoke-stop-c: 1;
+  --am-lp-karaoke-glow-mask-a: 0;
+  --am-lp-karaoke-glow-mask-b: 0;
+  --am-lp-karaoke-glow-mask-c: 0;
+  --am-lp-karaoke-glow-mask-d: 0;
+  --am-lp-karaoke-glow-stop-b: 0;
+  --am-lp-karaoke-glow-stop-c: 1;
+  --am-lp-karaoke-glow-mask-width: 100%;
+  --am-lp-karaoke-glow-mask-offset-x: 0px;
+  --am-lp-karaoke-lift-y: 0px;
+  --am-lp-karaoke-emphasis-scale: 1;
+  --am-lp-karaoke-emphasis-spread-x: 0px;
+  --am-lp-karaoke-glow-opacity: 0;
+  --am-lp-karaoke-glow-radius-core: 1.35px;
+  --am-lp-karaoke-glow-radius-mid: 2.75px;
+  --am-lp-karaoke-glow-radius-outer: 5px;
+  --am-lp-karaoke-glow-radius-bloom: 8px;
+  --am-lp-karaoke-glow-alpha-core: 0;
+  --am-lp-karaoke-glow-alpha-mid: 0;
+  --am-lp-karaoke-glow-alpha-outer: 0;
+  --am-lp-karaoke-glow-alpha-bloom: 0;
+  --am-lp-karaoke-glow-bleed-x: 32px;
+  --am-lp-karaoke-glow-bleed-y: 32px;
+  position: relative;
+  display: inline-block;
+  overflow: visible;
+  color: transparent;
+  line-height: inherit;
+  letter-spacing: 0;
+  vertical-align: baseline;
+  white-space: pre;
+  transform: translate(
+      var(--am-lp-karaoke-emphasis-spread-x),
+      var(--am-lp-karaoke-lift-y)
+    )
+    scale(var(--am-lp-karaoke-emphasis-scale));
+  transform-origin: center var(--am-lp-karaoke-emphasis-pivot-y, 100%);
+}
+
+.am-lp-karaoke-binding-motion-active {
+  will-change: transform;
+}
+
+.am-lp-karaoke-binding::before,
+.am-lp-karaoke-binding::after {
+  position: absolute;
+  pointer-events: none;
+  white-space: pre;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: var(--am-lp-karaoke-mask-width) 100%;
+  mask-size: var(--am-lp-karaoke-mask-width) 100%;
+}
+
+.am-lp-karaoke-binding::before {
+  content: attr(data-binding-text);
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    rgb(0 0 0 / var(--am-lp-karaoke-mask-a)) 0,
+    rgb(0 0 0 / var(--am-lp-karaoke-mask-b))
+      calc(var(--am-lp-karaoke-stop-b) * 100%),
+    rgb(0 0 0 / var(--am-lp-karaoke-mask-c))
+      calc(var(--am-lp-karaoke-stop-c) * 100%),
+    rgb(0 0 0 / var(--am-lp-karaoke-mask-d)) 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    rgb(0 0 0 / var(--am-lp-karaoke-mask-a)) 0,
+    rgb(0 0 0 / var(--am-lp-karaoke-mask-b))
+      calc(var(--am-lp-karaoke-stop-b) * 100%),
+    rgb(0 0 0 / var(--am-lp-karaoke-mask-c))
+      calc(var(--am-lp-karaoke-stop-c) * 100%),
+    rgb(0 0 0 / var(--am-lp-karaoke-mask-d)) 100%
+  );
+  inset: 0;
+  color: rgb(var(--am-lp-foreground-rgb));
+  opacity: 1;
+  -webkit-mask-position: calc(0px - var(--am-lp-karaoke-mask-offset-x)) 0;
+  mask-position: calc(0px - var(--am-lp-karaoke-mask-offset-x)) 0;
+}
+
+.am-lp-karaoke-binding::after {
+  content: none;
+  inset: calc(0px - var(--am-lp-karaoke-glow-bleed-y))
+    calc(0px - var(--am-lp-karaoke-glow-bleed-x));
+  padding: var(--am-lp-karaoke-glow-bleed-y)
+    var(--am-lp-karaoke-glow-bleed-x);
+  color: transparent;
+  opacity: var(--am-lp-karaoke-glow-opacity);
+  text-shadow:
+    0 0 var(--am-lp-karaoke-glow-radius-core)
+      rgb(
+        var(--am-lp-foreground-rgb) /
+          var(--am-lp-karaoke-glow-alpha-core)
+      ),
+    0 0 var(--am-lp-karaoke-glow-radius-mid)
+      rgb(
+        var(--am-lp-foreground-rgb) /
+          var(--am-lp-karaoke-glow-alpha-mid)
+      ),
+    0 0 var(--am-lp-karaoke-glow-radius-outer)
+      rgb(
+        var(--am-lp-foreground-rgb) /
+          var(--am-lp-karaoke-glow-alpha-outer)
+      ),
+    0 0 var(--am-lp-karaoke-glow-radius-bloom)
+      rgb(
+        var(--am-lp-foreground-rgb) /
+          var(--am-lp-karaoke-glow-alpha-bloom)
+      );
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    rgb(0 0 0 / var(--am-lp-karaoke-glow-mask-a)) 0,
+    rgb(0 0 0 / var(--am-lp-karaoke-glow-mask-b))
+      calc(var(--am-lp-karaoke-glow-stop-b) * 100%),
+    rgb(0 0 0 / var(--am-lp-karaoke-glow-mask-c))
+      calc(var(--am-lp-karaoke-glow-stop-c) * 100%),
+    rgb(0 0 0 / var(--am-lp-karaoke-glow-mask-d)) 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    rgb(0 0 0 / var(--am-lp-karaoke-glow-mask-a)) 0,
+    rgb(0 0 0 / var(--am-lp-karaoke-glow-mask-b))
+      calc(var(--am-lp-karaoke-glow-stop-b) * 100%),
+    rgb(0 0 0 / var(--am-lp-karaoke-glow-mask-c))
+      calc(var(--am-lp-karaoke-glow-stop-c) * 100%),
+    rgb(0 0 0 / var(--am-lp-karaoke-glow-mask-d)) 100%
+  );
+  -webkit-mask-size: var(--am-lp-karaoke-glow-mask-width) 100%;
+  mask-size: var(--am-lp-karaoke-glow-mask-width) 100%;
+  -webkit-mask-position: calc(
+      0px - var(--am-lp-karaoke-glow-mask-offset-x)
+    )
+    0;
+  mask-position: calc(0px - var(--am-lp-karaoke-glow-mask-offset-x)) 0;
+}
+
+.am-lp-karaoke-binding-glow-active::after {
+  content: attr(data-binding-text);
+}
+
+.am-lp-karaoke-track[data-paint-mode="line"] .am-lp-karaoke-binding {
+  --am-lp-karaoke-lift-y: 0px !important;
+  --am-lp-karaoke-emphasis-scale: 1 !important;
+  --am-lp-karaoke-emphasis-spread-x: 0px !important;
+  --am-lp-karaoke-glow-opacity: 0 !important;
+}
+
+@media (forced-colors: active) {
+  .am-lp-karaoke-binding {
+    color: CanvasText;
+    transform: none;
+  }
+
+  .am-lp-karaoke-binding::before,
+  .am-lp-karaoke-binding::after {
+    content: none !important;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}

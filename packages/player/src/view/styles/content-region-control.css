@@ -1,0 +1,384 @@
+.am-lp-content-region-control {
+  --am-lp-content-region-control-track: rgb(
+    var(--am-lp-foreground-rgb) / 0.2
+  );
+  --am-lp-content-region-control-range-rest: rgb(
+    var(--am-lp-foreground-rgb) / 0.58
+  );
+  --am-lp-content-region-control-range-active: rgb(
+    var(--am-lp-foreground-rgb)
+  );
+  --am-lp-content-region-control-handle-rest: rgb(
+    var(--am-lp-foreground-rgb) / 0.52
+  );
+  --am-lp-content-region-control-material: transparent;
+  position: absolute;
+  z-index: 3;
+  right: var(--am-lp-content-track-inset-right);
+  bottom: max(12px, env(safe-area-inset-bottom));
+  left: var(--am-lp-content-track-inset-left);
+  height: 44px;
+  isolation: isolate;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.am-lp-root[data-background-artwork="present"]
+  .am-lp-content-region-control {
+  --am-lp-content-region-control-track: rgb(255 255 255 / 0.24);
+  --am-lp-content-region-control-range-rest: rgb(255 255 255 / 0.62);
+  --am-lp-content-region-control-range-active: rgb(255 255 255);
+  --am-lp-content-region-control-handle-rest: rgb(255 255 255 / 0.56);
+  --am-lp-content-region-control-material: transparent;
+}
+
+/* A restrained, boundary-free glass layer only covers the selected space
+   between the two handles. It remains inert while the control is hidden. */
+.am-lp-content-region-control::before {
+  position: absolute;
+  z-index: 0;
+  top: 15px;
+  left: var(--am-lp-content-region-left);
+  width: var(--am-lp-content-region-width);
+  height: 14px;
+  border-radius: 7px;
+  background: var(--am-lp-content-region-control-material);
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition:
+    opacity 170ms var(--am-lp-curve-alpha),
+    background-color 120ms var(--am-lp-curve-alpha);
+}
+
+.am-lp-content-region-control[data-control-near="true"]::before,
+.am-lp-content-region-control[data-interaction="pointer"]::before,
+.am-lp-content-region-control[data-interaction="keyboard"]::before,
+.am-lp-content-region-control:has(:focus-visible)::before {
+  opacity: 1;
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  backdrop-filter: blur(18px) saturate(1.25);
+}
+
+.am-lp-content-region-track,
+.am-lp-content-region-selection,
+.am-lp-content-region-handle {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The window-level proximity state keeps hidden controls from intercepting
+   lyric clicks. These elements become interactive only after the pointer is
+   close enough, or while a gesture/focus is active. */
+.am-lp-content-region-selection,
+.am-lp-content-region-handle {
+  pointer-events: none;
+}
+
+.am-lp-content-region-control[data-control-near="true"]
+  .am-lp-content-region-selection,
+.am-lp-content-region-control[data-interaction="pointer"]
+  .am-lp-content-region-selection,
+.am-lp-content-region-control[data-interaction="keyboard"]
+  .am-lp-content-region-selection,
+.am-lp-content-region-control:has(:focus-visible)
+  .am-lp-content-region-selection {
+  pointer-events: auto;
+}
+
+.am-lp-content-region-control[data-handles-near="true"]
+  .am-lp-content-region-handle,
+.am-lp-content-region-control[data-interaction="pointer"]
+  .am-lp-content-region-handle,
+.am-lp-content-region-control[data-interaction="keyboard"]
+  .am-lp-content-region-handle,
+.am-lp-content-region-control:has(:focus-visible) .am-lp-content-region-handle {
+  pointer-events: auto;
+}
+
+.am-lp-content-region-track {
+  position: absolute;
+  z-index: 0;
+  top: 8px;
+  right: 0;
+  left: 0;
+  height: 28px;
+  border-radius: 14px;
+  pointer-events: none;
+}
+
+.am-lp-content-region-track::before {
+  position: absolute;
+  top: 13px;
+  right: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--am-lp-content-region-control-track);
+  content: "";
+  opacity: 0;
+  transform: scaleY(0.7);
+  transition:
+    opacity 170ms var(--am-lp-curve-alpha),
+    transform 170ms var(--am-lp-curve-alpha);
+}
+
+.am-lp-content-region-selection {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: var(--am-lp-content-region-left);
+  width: var(--am-lp-content-region-width);
+  height: 44px;
+  min-width: 1px;
+  border-radius: 22px;
+  outline: none;
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.am-lp-content-region-selection::before {
+  position: absolute;
+  top: 20px;
+  right: 0;
+  left: 0;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--am-lp-content-region-control-range-rest);
+  content: "";
+  opacity: 0;
+  transform: scaleY(0.78);
+  -webkit-backdrop-filter: saturate(1.3) brightness(1.04);
+  backdrop-filter: saturate(1.3) brightness(1.04);
+  transition:
+    opacity 120ms var(--am-lp-curve-alpha),
+    background-color 100ms var(--am-lp-curve-alpha),
+    transform 120ms var(--am-lp-curve-alpha);
+}
+
+.am-lp-content-region-control[data-operation="translate"]
+  .am-lp-content-region-selection {
+  cursor: grabbing;
+}
+
+.am-lp-content-region-control[data-control-near="true"]
+  .am-lp-content-region-track::before,
+.am-lp-content-region-control[data-control-near="true"]
+  .am-lp-content-region-selection::before,
+.am-lp-content-region-control[data-interaction="pointer"]
+  .am-lp-content-region-track::before,
+.am-lp-content-region-control[data-interaction="pointer"]
+  .am-lp-content-region-selection::before,
+.am-lp-content-region-control[data-interaction="keyboard"]
+  .am-lp-content-region-track::before,
+.am-lp-content-region-control[data-interaction="keyboard"]
+  .am-lp-content-region-selection::before,
+.am-lp-content-region-control:has(:focus-visible)
+  .am-lp-content-region-track::before,
+.am-lp-content-region-control:has(:focus-visible)
+  .am-lp-content-region-selection::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.am-lp-content-region-selection:focus-visible::before,
+.am-lp-content-region-control[data-interaction="pointer"]
+  .am-lp-content-region-selection::before,
+.am-lp-content-region-control[data-interaction="keyboard"]
+  .am-lp-content-region-selection::before {
+  background: var(--am-lp-content-region-control-range-active);
+  transform: scaleY(1.12);
+}
+
+.am-lp-content-region-handle {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  outline: none;
+  color: var(--am-lp-content-region-control-range-active);
+  background: transparent;
+  appearance: none;
+  cursor: col-resize;
+  touch-action: none;
+  transform: translateX(-50%);
+}
+
+.am-lp-content-region-handle-left {
+  left: var(--am-lp-content-region-left);
+}
+
+.am-lp-content-region-handle-right {
+  left: var(--am-lp-content-region-right);
+}
+
+.am-lp-content-region-handle::before {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 10px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--am-lp-content-region-control-handle-rest);
+  content: "";
+  opacity: 0;
+  transform: translateX(-50%) scale(0.82);
+  transform-origin: center;
+  -webkit-backdrop-filter: blur(12px) saturate(1.35) brightness(1.04);
+  backdrop-filter: blur(12px) saturate(1.35) brightness(1.04);
+  transition:
+    opacity 110ms var(--am-lp-curve-alpha),
+    background-color 100ms var(--am-lp-curve-alpha),
+    transform 110ms var(--am-lp-curve-alpha);
+}
+
+.am-lp-content-region-control[data-handles-near="true"]
+  .am-lp-content-region-handle::before,
+.am-lp-content-region-control[data-interaction="pointer"]
+  .am-lp-content-region-handle::before,
+.am-lp-content-region-control[data-interaction="keyboard"]
+  .am-lp-content-region-handle::before,
+.am-lp-content-region-control:has(:focus-visible)
+  .am-lp-content-region-handle::before {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+.am-lp-content-region-handle:focus-visible::before,
+.am-lp-content-region-control[data-active-handle="left"]
+  .am-lp-content-region-handle-left::before,
+.am-lp-content-region-control[data-active-handle="right"]
+  .am-lp-content-region-handle-right::before,
+.am-lp-content-region-control[data-operation="linked"][data-interaction="pointer"]
+  .am-lp-content-region-handle::before {
+  background: var(--am-lp-content-region-control-range-active);
+  transform: translateX(-50%) scale(1.12, 1.06);
+}
+
+@media (hover: hover) {
+  .am-lp-content-region-selection:hover {
+    cursor: grab;
+  }
+
+  .am-lp-content-region-control[data-operation="translate"]
+    .am-lp-content-region-selection:hover {
+    cursor: grabbing;
+  }
+}
+
+/* Touch has no hover target, so keep the 44px editor discoverable and usable. */
+@media (hover: none) {
+  .am-lp-content-region-selection,
+  .am-lp-content-region-handle {
+    pointer-events: auto;
+  }
+
+  .am-lp-content-region-track::before,
+  .am-lp-content-region-selection::before {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+
+  .am-lp-content-region-handle::before {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+
+  .am-lp-content-region-control::before {
+    opacity: 1;
+    -webkit-backdrop-filter: blur(18px) saturate(1.25);
+    backdrop-filter: blur(18px) saturate(1.25);
+  }
+}
+
+/* Hybrid devices report a fine primary pointer while still accepting touch.
+   Keep the editor hit targets available for that coarse pointer; the visual
+   layer remains hidden until the touch gesture marks the control as active. */
+@media (any-pointer: coarse) {
+  .am-lp-content-region-selection,
+  .am-lp-content-region-handle {
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .am-lp-content-region-control {
+    --am-lp-content-region-control-range-rest: rgb(
+      var(--am-lp-foreground-rgb) / 0.72
+    );
+    --am-lp-content-region-control-handle-rest: rgb(
+      var(--am-lp-foreground-rgb) / 0.7
+    );
+    --am-lp-content-region-control-material: rgb(
+      var(--am-lp-foreground-rgb) / 0.12
+    );
+  }
+
+  .am-lp-content-region-control::before,
+  .am-lp-content-region-selection::before,
+  .am-lp-content-region-handle::before {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .am-lp-content-region-control {
+    --am-lp-content-region-control-track: rgb(
+      var(--am-lp-foreground-rgb) / 0.42
+    );
+    --am-lp-content-region-control-range-rest: rgb(
+      var(--am-lp-foreground-rgb) / 0.78
+    );
+  }
+}
+
+.am-lp-root[data-reduced-motion="true"]
+  .am-lp-content-region-control *,
+.am-lp-root[data-reduced-motion="true"]
+  .am-lp-content-region-control::before,
+.am-lp-root[data-reduced-motion="true"]
+  .am-lp-content-region-control *::before,
+.am-lp-root[data-reduced-motion="true"]
+  .am-lp-content-region-control *::after {
+  transition-duration: 0ms !important;
+  transition-delay: 0ms !important;
+}
+
+@media (forced-colors: active) {
+  .am-lp-content-region-control,
+  .am-lp-root[data-background-artwork="present"]
+    .am-lp-content-region-control {
+    --am-lp-content-region-control-track: GrayText;
+    --am-lp-content-region-control-range-rest: CanvasText;
+    --am-lp-content-region-control-range-active: Highlight;
+    --am-lp-content-region-control-handle-rest: ButtonText;
+    --am-lp-content-region-control-material: Canvas;
+  }
+
+  .am-lp-content-region-control::before,
+  .am-lp-content-region-selection::before,
+  .am-lp-content-region-handle::before {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    forced-color-adjust: none;
+  }
+
+  .am-lp-content-region-track::before {
+    forced-color-adjust: none;
+  }
+
+  .am-lp-content-region-selection:focus-visible,
+  .am-lp-content-region-handle:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}
