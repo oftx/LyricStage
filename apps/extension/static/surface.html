@@ -38,6 +38,8 @@
       background: var(--bg);
       color: var(--fg);
       font: 13px/1.4 system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
     /* Flex column, not grid: display:none children stop being grid items and
        auto-placement then collapses tracks (the blank-panel bug class). Flex
@@ -290,12 +292,11 @@
       max-height: calc(100% - 88px);
       max-width: calc(100% - 16px);
       z-index: 6;
-      border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+      border: 1px solid var(--line);
       border-radius: 12px;
-      background: color-mix(in srgb, var(--panel) 82%, transparent);
-      backdrop-filter: blur(16px) saturate(1.2);
-      -webkit-backdrop-filter: blur(16px) saturate(1.2);
-      box-shadow: 0 8px 28px rgb(0 0 0 / 30%);
+      background: var(--panel);
+      box-shadow: 0 8px 28px rgb(0 0 0 / 45%);
+      -webkit-font-smoothing: antialiased;
     }
 
     .library-list li:focus-visible {
