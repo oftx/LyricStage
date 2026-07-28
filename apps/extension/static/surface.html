@@ -354,9 +354,17 @@
     .library-list li .lib-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .library-list li .lib-badge { opacity: 0.6; font-size: 11px; }
     .library-list li .lib-action {
-      font: inherit; font-size: 11px; padding: 2px 6px; border-radius: 4px;
-      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+      font: inherit; font-size: 11px; padding: 4px; border-radius: 4px;
+      border: 1px solid transparent;
       background: transparent; color: inherit; cursor: pointer; flex-shrink: 0;
+      opacity: 0.6; display: grid; place-items: center; transition: all 0.2s;
+    }
+    .library-list li .lib-action svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .library-list li .lib-action:hover { opacity: 1; border-color: color-mix(in srgb, currentColor 25%, transparent); }
+    .library-list li .lib-action.is-delete:hover {
+      color: #e53e3e;
+      border-color: color-mix(in srgb, #e53e3e 50%, transparent);
+      background: color-mix(in srgb, #e53e3e 10%, transparent);
     }
     .library-import { display: flex; flex-direction: column; gap: 6px; }
     .library-import input, .library-import textarea {
@@ -447,15 +455,13 @@
     </div>
   </section>
   <section class="settings-panel library-panel" id="library-panel" hidden aria-label="歌词库">
-    <div class="settings-row library-row">
-      <span class="settings-label">歌词库</span>
-      <div class="library-controls">
-        <div class="library-media" id="library-media">—</div>
-        <input type="search" id="library-search" placeholder="搜索标题 / 创作者 / 别名" aria-label="搜索歌词库">
-        <ul class="library-list" id="library-list" aria-label="歌词库条目"></ul>
-        <div class="library-actions">
-          <button type="button" class="toggle" id="library-ignore" aria-pressed="false">忽略本媒体</button>
-        </div>
+    <div class="library-controls" style="width: 100%;">
+      <div class="library-media" id="library-media">—</div>
+      <input type="search" id="library-search" placeholder="搜索标题 / 创作者 / 别名" aria-label="搜索歌词库">
+      <ul class="library-list" id="library-list" aria-label="歌词库条目"></ul>
+      <div class="library-actions">
+        <button type="button" class="toggle" id="library-ignore" aria-pressed="false">忽略本媒体</button>
+      </div>
         <div class="library-import" id="library-edit-panel" hidden>
           <input type="text" id="library-edit-title" placeholder="标题" aria-label="编辑标题">
           <input type="text" id="library-edit-creators" placeholder="创作者（/ 分隔）" aria-label="编辑创作者">
