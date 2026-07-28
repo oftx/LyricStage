@@ -56,7 +56,7 @@ pnpm build
 ## 🥇 奖项
 
 ![Works on My Machine](https://img.shields.io/badge/Works%20on%20my%20machine-Certified%20%E2%9C%94-brightgreen?style=for-the-badge)
-![100% AI Generated](https://img.shields.io/badge/Code-100%25%20AI%20Generated-9cf?style=for-the-badge)
+![99% AI Generated](https://img.shields.io/badge/Code-99%25%20AI%20Generated-9cf?style=for-the-badge)
 
 ---
 
