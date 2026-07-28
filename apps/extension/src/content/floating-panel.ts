@@ -142,7 +142,12 @@ export function createFloatingLyricPanel(options: {
     .grip:active { cursor: grabbing; }
     .grip button {
       border: 0; background: transparent; color: inherit; cursor: pointer;
-      font: inherit; padding: 2px 6px; border-radius: 4px;
+      font: inherit; padding: 2px; border-radius: 50%;
+      display: grid; place-items: center; width: 22px; height: 22px;
+      margin-right: -4px;
+    }
+    .grip button svg {
+      width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round;
     }
     .grip button:hover { background: rgba(255, 255, 255, 0.15); }
     .panel[data-grip-theme="light"] .grip button:hover {
@@ -179,7 +184,7 @@ export function createFloatingLyricPanel(options: {
   gripTitle.textContent = 'LyricStage';
   const closeButton = document.createElement('button');
   closeButton.type = 'button';
-  closeButton.textContent = '×';
+  closeButton.innerHTML = '<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>';
   closeButton.title = '收起面板';
   closeButton.setAttribute('aria-label', '收起歌词面板');
   grip.append(gripTitle, closeButton);
