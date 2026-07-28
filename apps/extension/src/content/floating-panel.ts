@@ -81,6 +81,7 @@ export function resolveGeometry(
 
 export interface FloatingPanelController {
   destroy(): void;
+  setVisibility(visible: boolean): void;
 }
 
 export function createFloatingLyricPanel(options: {
@@ -376,6 +377,9 @@ export function createFloatingLyricPanel(options: {
       window.removeEventListener('resize', onViewportResize);
       window.removeEventListener('message', onThemeMessage);
       host.remove();
+    },
+    setVisibility(visible: boolean): void {
+      host.style.display = visible ? '' : 'none';
     },
   };
 }

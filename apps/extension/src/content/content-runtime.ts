@@ -23,12 +23,15 @@ import {
   loadPlatformLyricText,
   parseMediaId,
   readMediaTitleInfo,
+  parseYouTubeRoute,
+  parseBilibiliRoute,
+  isQqPlayerPage,
   type PortableLyricText,
 } from '@lyric-stage/platform-adapters';
 import { createPageClockClient } from './page-clock-client.js';
 import { loadAppleMusicLyricText } from './musickit-lyrics-client.js';
 import { LyricRefreshController } from './lyric-refresh.js';
-import { createFloatingLyricPanel } from './floating-panel.js';
+import { createFloatingLyricPanel, type FloatingPanelController } from './floating-panel.js';
 import {
   chromeLyricStorage,
   ExtensionLyricLibrary,
@@ -993,6 +996,13 @@ function appleWarmupStillNeeded(): boolean {
     || lyricRefresh.revision === 0;
 }
 
+function isPlaybackRoute(plat: string, href: string): boolean {
+  if (plat === 'youtube') return parseYouTubeRoute(href) !== null;
+  if (plat === 'bilibili') return parseBilibiliRoute(href) !== null;
+  if (plat === 'qqmusic') return isQqPlayerPage(href);
+  return true;
+}
+
 if (runtimeActive) {
   window.__lyricStageContentRuntime = Object.freeze({
     ownerId,
@@ -1028,14 +1038,23 @@ if (runtimeActive) {
 
   // In-page floating panel (userscript's primary form). Only on recognized
   // platforms; the surface iframe owns the player and worker port.
+  let floatingPanel: FloatingPanelController | null = null;
   if (platform !== 'unknown') {
     try {
-      createFloatingLyricPanel({
+      floatingPanel = createFloatingLyricPanel({
         surfaceUrl: chrome.runtime.getURL(
           `surface.html?panel=1&host=${encodeURIComponent(sessionId)}`,
         ),
         storageKeySuffix: window.location.origin,
       });
+      let lastHref = window.location.href;
+      floatingPanel.setVisibility(isPlaybackRoute(platform, lastHref));
+      window.setInterval(() => {
+        if (window.location.href !== lastHref) {
+          lastHref = window.location.href;
+          floatingPanel?.setVisibility(isPlaybackRoute(platform, lastHref));
+        }
+      }, 500);
     } catch {
       // Panel is progressive enhancement; never break playback publishing.
     }
