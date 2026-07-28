@@ -11,7 +11,6 @@ import {
   deriveInstrumentalGaps,
   deriveLyricDocumentCapabilities,
   isLyricsFontWeightTier,
-  parseLrc,
   type LyricsPlayerController,
   type PlaybackCommands,
 } from '@lyric-stage/player';
@@ -169,15 +168,6 @@ const ui = {
   libraryList: document.getElementById('library-list'),
   libraryIgnore: document.getElementById('library-ignore') as HTMLButtonElement | null,
   librarySearch: document.getElementById('library-search') as HTMLInputElement | null,
-  libraryAutoMatch: document.getElementById('library-automatch') as HTMLButtonElement | null,
-  libraryImport: document.getElementById('library-import') as HTMLButtonElement | null,
-  libraryImportPanel: document.getElementById('library-import-panel'),
-  libraryImportTitle: document.getElementById('library-import-title') as HTMLInputElement | null,
-  libraryImportCreators: document.getElementById('library-import-creators') as HTMLInputElement | null,
-  libraryImportText: document.getElementById('library-import-text') as HTMLTextAreaElement | null,
-  libraryImportTranslation: document.getElementById('library-import-translation') as HTMLTextAreaElement | null,
-  libraryImportSave: document.getElementById('library-import-save') as HTMLButtonElement | null,
-  libraryImportStatus: document.getElementById('library-import-status'),
   timingOffsetMinus: document.getElementById('timing-offset-minus') as HTMLButtonElement | null,
   timingOffsetPlus: document.getElementById('timing-offset-plus') as HTMLButtonElement | null,
   timingOffsetValue: document.getElementById('timing-offset-value'),
@@ -1269,59 +1259,6 @@ function wireLibraryControls(): void {
         showLibraryToast('已忽略本媒体 — 再次点击可恢复');
       }
       void refreshLibraryUi();
-    })();
-  });
-
-  ui.libraryImport?.addEventListener('click', () => {
-    const panel = ui.libraryImportPanel;
-    if (!panel) return;
-    panel.hidden = !panel.hidden;
-    if (!panel.hidden && ui.libraryImportTitle && !ui.libraryImportTitle.value) {
-      ui.libraryImportTitle.value = currentMediaTitle ?? '';
-    }
-  });
-
-  ui.libraryImportSave?.addEventListener('click', () => {
-    void (async () => {
-      if (ui.libraryImportSave?.disabled) return;
-      const title = ui.libraryImportTitle?.value.trim() ?? '';
-      const text = ui.libraryImportText?.value.trim() ?? '';
-      const status = ui.libraryImportStatus;
-      if (!title || !text) {
-        if (status) status.textContent = '需要标题和 LRC 正文';
-        return;
-      }
-      // Sanity-parse before saving so garbage never enters the library.
-      const parsed = parseLrc({ text, sourceName: 'manual-import' });
-      if (!parsed.ok || parsed.document.lines.length === 0) {
-        if (status) status.textContent = 'LRC 未解析出任何歌词行';
-        return;
-      }
-      const creators = (ui.libraryImportCreators?.value ?? '')
-        .split(/\s*[/、]\s*/)
-        .map((entry) => entry.trim())
-        .filter(Boolean);
-      const translation = ui.libraryImportTranslation?.value.trim() ?? '';
-      if (ui.libraryImportSave) ui.libraryImportSave.disabled = true;
-      try {
-        const record = await lyricLibrary.upsert({
-          title,
-          creators,
-          format: 'lrc',
-          text,
-          ...(translation ? { translationText: translation } : {}),
-        });
-        if (status) status.textContent = '已保存';
-        if (ui.libraryImportPanel) ui.libraryImportPanel.hidden = true;
-        await selectLibraryEntry(record.id);
-        showLibraryToast(`已导入并使用「${record.title}」`);
-      } catch (error) {
-        if (status) {
-          status.textContent = error instanceof Error ? error.message : '保存失败';
-        }
-      } finally {
-        if (ui.libraryImportSave) ui.libraryImportSave.disabled = false;
-      }
     })();
   });
 

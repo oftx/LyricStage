@@ -455,7 +455,6 @@
         <ul class="library-list" id="library-list" aria-label="歌词库条目"></ul>
         <div class="library-actions">
           <button type="button" class="toggle" id="library-ignore" aria-pressed="false">忽略本媒体</button>
-          <button type="button" class="toggle" id="library-import">导入 LRC</button>
         </div>
         <div class="library-import" id="library-edit-panel" hidden>
           <input type="text" id="library-edit-title" placeholder="标题" aria-label="编辑标题">
@@ -468,16 +467,6 @@
             <button type="button" class="toggle" id="library-edit-save">保存</button>
             <button type="button" class="toggle" id="library-edit-cancel">取消</button>
             <span class="library-status" id="library-edit-status" role="status" aria-live="polite"></span>
-          </div>
-        </div>
-        <div class="library-import" id="library-import-panel" hidden>
-          <input type="text" id="library-import-title" placeholder="标题" aria-label="歌词标题">
-          <input type="text" id="library-import-creators" placeholder="创作者（/ 分隔）" aria-label="创作者">
-          <textarea id="library-import-text" rows="6" placeholder="[00:12.34] 歌词…" aria-label="LRC 正文"></textarea>
-          <textarea id="library-import-translation" rows="3" placeholder="翻译 LRC（可选）" aria-label="翻译 LRC"></textarea>
-          <div class="library-actions">
-            <button type="button" class="toggle" id="library-import-save">保存并使用</button>
-            <span class="library-status" id="library-import-status" role="status" aria-live="polite"></span>
           </div>
         </div>
       </div>
