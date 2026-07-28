@@ -184,7 +184,16 @@ export function installPageClockMainBridge(
         ...args: Parameters<typeof nativePlay>
       ): ReturnType<typeof nativePlay> {
         rememberLocal(this);
-        return nativePlay.apply(this, args);
+        const promise = nativePlay.apply(this, args);
+        // Suppress unhandled AbortError/NotAllowedError noise in the console.
+        if (promise !== undefined && typeof promise.catch === 'function') {
+          promise.catch((err: Error) => {
+            if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) {
+              // Ignore
+            }
+          });
+        }
+        return promise;
       };
     } catch {
       // ignore

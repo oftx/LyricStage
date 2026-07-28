@@ -184,7 +184,6 @@ export function createFloatingLyricPanel(options: {
   grip.append(gripTitle, closeButton);
   const frame = document.createElement('iframe');
   frame.allow = 'autoplay; fullscreen';
-  frame.allowFullscreen = true;
   const resize = document.createElement('div');
   resize.className = 'resize';
   resize.setAttribute('role', 'separator');

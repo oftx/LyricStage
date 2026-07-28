@@ -107,34 +107,44 @@ function fromAppleMusicKit(): string | null {
   }
 }
 
+function upgradeToHttps(url: string | null): string | null {
+  if (!url) return null;
+  if (url.startsWith('//')) return `https:${url}`;
+  if (url.startsWith('http://')) return url.replace(/^http:/, 'https:');
+  return url;
+}
+
 export function readCurrentCoverUrl(
   platform: 'netease' | 'qqmusic' | 'applemusic' | 'youtube' | 'bilibili' | 'unknown',
 ): string | null {
-  const session = fromMediaSession();
-  if (session) return session;
+  let url = fromMediaSession();
 
-  if (platform === 'applemusic') {
-    return fromAppleMusicKit() ?? fromAppleMusicDom();
-  }
-  if (platform === 'netease') return fromNeteaseDom();
-  if (platform === 'qqmusic') return fromQqDom();
-  if (platform === 'youtube') {
-    return firstImgSrc([
-      'ytd-video-primary-info-renderer img',
-      '#movie_player .ytp-cued-thumbnail-overlay-image',
-    ]);
-  }
-  if (platform === 'bilibili') {
-    // Media Session (checked above) covers most cases; og:image is the
-    // stable document-level fallback for video and bangumi pages.
-    const og = document
-      .querySelector('meta[property="og:image"]')
-      ?.getAttribute('content');
-    if (og) {
-      const upgraded = og.startsWith('//') ? `https:${og}` : og.replace(/^http:/, 'https:');
-      if (isUsableCoverUrl(upgraded)) return upgraded;
+  if (!url) {
+    if (platform === 'applemusic') {
+      url = fromAppleMusicKit() ?? fromAppleMusicDom();
+    } else if (platform === 'netease') {
+      url = fromNeteaseDom();
+    } else if (platform === 'qqmusic') {
+      url = fromQqDom();
+    } else if (platform === 'youtube') {
+      url = firstImgSrc([
+        'ytd-video-primary-info-renderer img',
+        '#movie_player .ytp-cued-thumbnail-overlay-image',
+      ]);
+    } else if (platform === 'bilibili') {
+      // Media Session (checked above) covers most cases; og:image is the
+      // stable document-level fallback for video and bangumi pages.
+      const og = document
+        .querySelector('meta[property="og:image"]')
+        ?.getAttribute('content');
+      if (og) {
+        url = og;
+      }
+    } else {
+      url = fromNeteaseDom() ?? fromQqDom() ?? fromAppleMusicDom();
     }
-    return null;
   }
-  return fromNeteaseDom() ?? fromQqDom() ?? fromAppleMusicDom();
+
+  const httpsUrl = upgradeToHttps(url);
+  return httpsUrl && isUsableCoverUrl(httpsUrl) ? httpsUrl : null;
 }

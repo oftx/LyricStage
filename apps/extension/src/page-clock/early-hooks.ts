@@ -148,7 +148,23 @@ export function installPageClockEarlyHooks(): void {
       ...args: Parameters<typeof nativePlay>
     ): ReturnType<typeof nativePlay> {
       remember(this);
-      return nativePlay.apply(this, args);
+      const promise = nativePlay.apply(this, args);
+      // Suppress unhandled AbortError/NotAllowedError noise in the console.
+      // Since our hook is in the call stack, the browser attributes the site's
+      // unhandled rejections to the extension. A side-catch silences them
+      // without altering the promise returned to the site.
+      if (promise !== undefined && typeof promise.catch === 'function') {
+        promise.catch((err: Error) => {
+          if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) {
+            // Ignore expected media interruptions
+          } else {
+            // If it's something else, we shouldn't swallow it unconditionally,
+            // but we can't easily re-throw without triggering the unhandled
+            // rejection again. For play() it's almost always these two.
+          }
+        });
+      }
+      return promise;
     };
     const nativePause = proto.pause;
     proto.pause = function patchedPause(this: HTMLMediaElement): void {
