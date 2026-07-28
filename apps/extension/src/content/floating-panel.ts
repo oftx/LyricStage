@@ -148,6 +148,7 @@ export function createFloatingLyricPanel(options: {
     }
     .grip button svg {
       width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round;
+      pointer-events: none;
     }
     .grip button:hover { background: rgba(255, 255, 255, 0.15); }
     .panel[data-grip-theme="light"] .grip button:hover {
