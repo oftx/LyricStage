@@ -212,17 +212,6 @@ describe('ExtensionLyricLibrary', () => {
     expect(await lib.list()).toHaveLength(2);
   });
 
-  it('defaults auto-match on and persists only the off state', async () => {
-    const { lib, storage } = library();
-    expect(await lib.isAutoMatchEnabled()).toBe(true);
-    await lib.setAutoMatchEnabled(false);
-    expect(await lib.isAutoMatchEnabled()).toBe(false);
-    expect(storage.data.get('lyric-library:auto-match')).toBe(false);
-    await lib.setAutoMatchEnabled(true);
-    expect(await lib.isAutoMatchEnabled()).toBe(true);
-    expect(storage.data.has('lyric-library:auto-match')).toBe(false);
-  });
-
   it('rejects empty text and enforces the record cap for new entries', async () => {
     const { lib } = library();
     await expect(lib.upsert({ ...baseInput, text: '   ' })).rejects.toThrow(/empty/);

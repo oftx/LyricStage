@@ -25,7 +25,6 @@ import {
   ExtensionLyricLibrary,
   type LyricLibraryIndexEntryV1,
 } from '../library/extension-lyric-library.js';
-import { matchLyrics, normalizeSearchText } from '../library/lyric-matcher.js';
 import { createSparseAnchorClock } from './sparse-anchor-clock.js';
 import {
   clearTimingOffset,
@@ -71,6 +70,15 @@ if (panelMode) {
 // delegates PiP to the host content script via postMessage.
 if (!document.fullscreenEnabled) {
   document.getElementById('toggle-fullscreen')?.setAttribute('hidden', '');
+}
+
+export function normalizeSearchText(value: string): string {
+  return value
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\p{P}\p{S}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 const clock = createSparseAnchorClock();
@@ -1127,17 +1135,6 @@ async function refreshLibraryUi(): Promise<void> {
   const list = ui.libraryList;
   if (!list) return;
   // Rank by match score for the current media so the likely pick is on top.
-  const ranked = currentMediaTitle
-    ? matchLyrics(
-      {
-        title: currentMediaTitle,
-        creators: currentMediaCreators,
-        durationMs: 0,
-      },
-      libraryEntriesCache,
-    ).candidates
-    : [];
-  const scoreById = new Map(ranked.map((entry) => [entry.lyricId, entry.score]));
   const query = normalizeSearchText(ui.librarySearch?.value ?? '');
   const visible = query
     ? libraryEntriesCache.filter((entry) => {
@@ -1150,10 +1147,7 @@ async function refreshLibraryUi(): Promise<void> {
       return haystack.includes(query);
     })
     : libraryEntriesCache;
-  const sorted = [...visible].sort((left, right) => (
-    (scoreById.get(right.id) ?? -1) - (scoreById.get(left.id) ?? -1)
-    || right.updatedAt - left.updatedAt
-  ));
+  const sorted = [...visible].sort((left, right) => right.updatedAt - left.updatedAt);
   list.textContent = '';
   list.setAttribute('role', 'listbox');
   for (const entry of sorted.slice(0, 50)) {
@@ -1171,11 +1165,9 @@ async function refreshLibraryUi(): Promise<void> {
       : entry.title;
     const badge = document.createElement('span');
     badge.className = 'lib-badge';
-    const score = scoreById.get(entry.id);
     badge.textContent = [
       entry.format,
       entry.hasTranslation ? '译' : '',
-      score !== undefined ? `${Math.round(score * 100)}%` : '',
     ].filter(Boolean).join(' ');
     const editBtn = document.createElement('button');
     editBtn.type = 'button';
@@ -1225,11 +1217,6 @@ async function refreshLibraryUi(): Promise<void> {
       : '（歌词库为空 — 在音乐平台播放歌曲会自动收录）';
     list.append(empty);
   }
-  if (ui.libraryAutoMatch) {
-    const enabled = await lyricLibrary.isAutoMatchEnabled();
-    ui.libraryAutoMatch.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-    ui.libraryAutoMatch.classList.toggle('is-on', enabled);
-  }
 }
 
 async function selectLibraryEntry(lyricId: string): Promise<void> {
@@ -1261,13 +1248,6 @@ function wireLibraryControls(): void {
   ui.librarySearch?.addEventListener('input', () => {
     void refreshLibraryUi();
   });
-  ui.libraryAutoMatch?.addEventListener('click', () => {
-    void (async () => {
-      const enabled = await lyricLibrary.isAutoMatchEnabled();
-      await lyricLibrary.setAutoMatchEnabled(!enabled);
-      void refreshLibraryUi();
-    })();
-  });
   ui.libraryIgnore?.addEventListener('click', () => {
     void (async () => {
       if (!currentMediaId) return;
@@ -1281,7 +1261,7 @@ function wireLibraryControls(): void {
         } catch {
           // worker asleep — reconnect loop covers it
         }
-        showLibraryToast('已恢复自动匹配，正在重新加载歌词…');
+        showLibraryToast('已取消忽略，正在重新加载歌词…');
       } else {
         await lyricLibrary.setPreference(currentMediaId, { ignored: true });
         manualLibraryLock = false;

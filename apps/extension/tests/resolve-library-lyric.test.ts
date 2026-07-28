@@ -38,58 +38,22 @@ async function harness() {
 }
 
 describe('resolveLibraryLyric', () => {
-  it('applies the explicit preference before any matching', async () => {
+  it('applies the explicit preference', async () => {
     const { library, record } = await harness();
     await library.setPreference('bilibili:BV1:p:1', { lyricId: record.id });
-    const resolved = await resolveLibraryLyric({
-      library,
-      readTitleInfo: () => ({ title: '完全无关的标题', creators: [] }),
-      getDurationMs: () => 0,
-    }, 'bilibili:BV1:p:1');
+    const resolved = await resolveLibraryLyric({ library }, 'bilibili:BV1:p:1');
     expect(resolved?.libraryId).toBe(record.id);
     expect(resolved?.lyric.sourceName).toBe('library:小星星');
   });
 
-  it('respects ignore and the global auto-match switch', async () => {
+  it('respects ignore preference', async () => {
     const { library } = await harness();
     await library.setPreference('bilibili:BV2:p:1', { ignored: true });
-    expect(await resolveLibraryLyric({
-      library,
-      readTitleInfo: () => ({ title: '小星星', creators: ['汪苏泷'] }),
-      getDurationMs: () => 0,
-    }, 'bilibili:BV2:p:1')).toBeNull();
-
-    await library.setAutoMatchEnabled(false);
-    expect(await resolveLibraryLyric({
-      library,
-      readTitleInfo: () => ({ title: '小星星', creators: ['汪苏泷'] }),
-      getDurationMs: () => 0,
-    }, 'bilibili:BV3:p:1')).toBeNull();
+    expect(await resolveLibraryLyric({ library }, 'bilibili:BV2:p:1')).toBeNull();
   });
 
-  it('auto-matches above the threshold and rejects weak matches', async () => {
-    const { library, record } = await harness();
-    const hit = await resolveLibraryLyric({
-      library,
-      readTitleInfo: () => ({ title: '汪苏泷《小星星》官方MV', creators: ['某UP'] }),
-      getDurationMs: () => 213_500,
-    }, 'bilibili:BV4:p:1');
-    expect(hit?.libraryId).toBe(record.id);
-
-    const miss = await resolveLibraryLyric({
-      library,
-      readTitleInfo: () => ({ title: 'Totally Unrelated Video', creators: [] }),
-      getDurationMs: () => 0,
-    }, 'bilibili:BV5:p:1');
-    expect(miss).toBeNull();
-  });
-
-  it('returns null without a page title or an empty library', async () => {
+  it('returns null without explicit preference', async () => {
     const { library } = await harness();
-    expect(await resolveLibraryLyric({
-      library,
-      readTitleInfo: () => ({ title: null, creators: [] }),
-      getDurationMs: () => 0,
-    }, 'bilibili:BV6:p:1')).toBeNull();
+    expect(await resolveLibraryLyric({ library }, 'bilibili:BV6:p:1')).toBeNull();
   });
 });

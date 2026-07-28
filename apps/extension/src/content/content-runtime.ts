@@ -561,14 +561,9 @@ const lyricRefresh = new LyricRefreshController({
   publishSnapshotOrHold: () => publishSnapshotOrHold(),
   lookupLibraryLyric: (forMediaId) => resolveLibraryLyric({
     library: lyricLibrary,
-    readTitleInfo: () => readMediaTitleInfo(platform, document),
-    getDurationMs: () => pageClock.getLatestSample?.()?.durationMs
-      ?? timeline.getSnapshot(now())?.durationMs
-      ?? 0,
   }, forMediaId),
   onLyricResolved: ({ platform: sourcePlatform, externalId, lyric, track }) => {
-    // Auto-collect every successfully fetched platform lyric so video
-    // platforms can title-match against it later. Titles prefer the API
+    // Auto-collect every successfully fetched platform lyric. Titles prefer the API
     // track (QQ), then page-derived info; failures never disturb playback.
     const pageInfo = readMediaTitleInfo(platform, document);
     const title = track?.title ?? pageInfo.title ?? '';

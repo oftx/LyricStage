@@ -232,9 +232,7 @@ export class LyricRefreshController {
 
     if (!canFetch || !parsed) {
       // Video platforms (youtube/bilibili) have no lyric source; consult the
-      // local library — explicit preference first, then title matching. The
-      // failure-backoff machinery applies so a miss is not retried at the
-      // snapshot cadence (page titles rarely change mid-video).
+      // local library — explicit preference only.
       const lookup = env.lookupLibraryLyric;
       if (!lookup || !parsed) return;
       this.#inFlightMediaId = forMedia;
