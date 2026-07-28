@@ -901,7 +901,16 @@ function paint(): void {
     // left a blank void with no call to action (review finding).
     ui.empty?.removeAttribute('hidden');
     if (ui.empty) {
-      ui.empty.innerHTML = '未找到匹配歌词 — <button type="button" class="empty-link" id="empty-link-library">从歌词库中选取</button> 或 <button type="button" class="empty-link" id="empty-link-search">搜索歌词</button>';
+      ui.empty.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div>未找到匹配歌词</div>
+          <div>
+            <button type="button" class="empty-link" id="empty-link-library">从歌词库中选取</button>
+            或
+            <button type="button" class="empty-link" id="empty-link-search">搜索歌词</button>
+          </div>
+        </div>
+      `;
 
       document.getElementById('empty-link-library')?.addEventListener('click', (e) => {
         e.stopPropagation();
