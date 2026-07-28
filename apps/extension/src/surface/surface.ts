@@ -25,6 +25,7 @@ import {
   type LyricLibraryIndexEntryV1,
 } from '../library/extension-lyric-library.js';
 import { createSparseAnchorClock } from './sparse-anchor-clock.js';
+import type { PortableLyricText, LyricSearchRequest, LyricSearchResultItem, SearchPlatform, SearchType } from '@lyric-stage/platform-adapters';
 import {
   clearTimingOffset,
   loadGlobalTimingOffset,
@@ -125,6 +126,7 @@ function effectiveDisplayMode(): SurfacePreferences['displayMode'] {
 }
 let settingsOpen = false;
 let libraryOpen = false;
+let onlineSearchOpen = false;
 let themeMediaQuery: MediaQueryList | null = null;
 /** Avoid stacking concurrent artwork loads when toggling cover rapidly. */
 let artworkRequestId = 0;
@@ -183,6 +185,13 @@ const ui = {
   libraryEditText: document.getElementById('library-edit-text') as HTMLTextAreaElement | null,
   libraryEditTranslation: document.getElementById('library-edit-translation') as HTMLTextAreaElement | null,
   libraryEditStatus: document.getElementById('library-edit-status'),
+  toggleOnlineSearch: document.getElementById('toggle-online-search') as HTMLButtonElement | null,
+  onlineSearchPanel: document.getElementById('online-search-panel'),
+  onlineSearchMedia: document.getElementById('online-search-media'),
+  onlineSearchInput: document.getElementById('online-search-input') as HTMLInputElement | null,
+  onlineSearchBtn: document.getElementById('online-search-btn') as HTMLButtonElement | null,
+  onlineSearchList: document.getElementById('online-search-list'),
+  onlineSearchStatus: document.getElementById('online-search-status'),
 };
 
 const lyricLibrary = new ExtensionLyricLibrary(chromeLyricStorage());
@@ -472,6 +481,12 @@ function syncSettingsUi(): void {
   if (ui.libraryPanel) {
     ui.libraryPanel.hidden = !libraryOpen;
   }
+  if (ui.toggleOnlineSearch) {
+    ui.toggleOnlineSearch.setAttribute('aria-pressed', onlineSearchOpen ? 'true' : 'false');
+  }
+  if (ui.onlineSearchPanel) {
+    ui.onlineSearchPanel.hidden = !onlineSearchOpen;
+  }
   syncFullscreenUi();
   syncSecondaryToggleUi();
 }
@@ -568,15 +583,21 @@ function wireSettingsControls(): void {
 
   const toggleSettingsOpen = (): void => {
     settingsOpen = !settingsOpen;
-    if (settingsOpen) libraryOpen = false;
+    if (settingsOpen) { libraryOpen = false; onlineSearchOpen = false; }
     syncSettingsUi();
   };
   ui.toggleSettings?.addEventListener('click', toggleSettingsOpen);
   ui.toggleLibrary?.addEventListener('click', () => {
     libraryOpen = !libraryOpen;
-    if (libraryOpen) settingsOpen = false;
+    if (libraryOpen) { settingsOpen = false; onlineSearchOpen = false; }
     syncSettingsUi();
     if (libraryOpen) void refreshLibraryUi();
+  });
+  ui.toggleOnlineSearch?.addEventListener('click', () => {
+    onlineSearchOpen = !onlineSearchOpen;
+    if (onlineSearchOpen) { settingsOpen = false; libraryOpen = false; }
+    syncSettingsUi();
+    if (onlineSearchOpen) wireOnlineSearchUi();
   });
 
   ui.toggleFullscreen?.addEventListener('click', () => {
@@ -880,7 +901,25 @@ function paint(): void {
     // left a blank void with no call to action (review finding).
     ui.empty?.removeAttribute('hidden');
     if (ui.empty) {
-      ui.empty.textContent = '未找到匹配歌词 — 点击右上角 歌词库 搜索、选择或导入 LRC';
+      ui.empty.innerHTML = '未找到匹配歌词 — <button type="button" class="empty-link" id="empty-link-library">从歌词库中选取</button> 或 <button type="button" class="empty-link" id="empty-link-search">搜索歌词</button>';
+
+      document.getElementById('empty-link-library')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        libraryOpen = true;
+        settingsOpen = false;
+        onlineSearchOpen = false;
+        syncSettingsUi();
+        void refreshLibraryUi();
+      });
+
+      document.getElementById('empty-link-search')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onlineSearchOpen = true;
+        settingsOpen = false;
+        libraryOpen = false;
+        syncSettingsUi();
+        wireOnlineSearchUi();
+      });
     }
   } else {
     ui.empty?.setAttribute('hidden', '');
@@ -1091,6 +1130,7 @@ let toastTimer: number | null = null;
 function showLibraryToast(text: string): void {
   const toast = ui.surfaceToast;
   if (!toast) return;
+  toast.dataset.interactive = 'false';
   toast.textContent = text;
   toast.dataset.show = 'true';
   if (toastTimer !== null) window.clearTimeout(toastTimer);
@@ -1098,6 +1138,24 @@ function showLibraryToast(text: string): void {
     toastTimer = null;
     toast.dataset.show = 'false';
   }, 2_600);
+}
+
+function showInteractiveToast(html: string, onAction: (action: string) => void): void {
+  const toast = ui.surfaceToast;
+  if (!toast) return;
+  if (toastTimer !== null) { window.clearTimeout(toastTimer); toastTimer = null; }
+  toast.innerHTML = html;
+  toast.dataset.show = 'true';
+  toast.dataset.interactive = 'true';
+  toast.querySelectorAll<HTMLButtonElement>('[data-action]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onAction(btn.dataset.action!);
+      toast.dataset.show = 'false';
+      toast.dataset.interactive = 'false';
+      toast.innerHTML = '';
+    }, { once: true });
+  });
 }
 
 /* ---------------------------------------------------------------- library */
@@ -1278,7 +1336,6 @@ function wireLibraryControls(): void {
         'lyric-library:record:',
         'lyric-library:index',
         'lyric-library:preference:',
-        'lyric-library:auto-match',
       ];
       if (Object.keys(changes).some(
         (key) => dataPrefixes.some((prefix) => key.startsWith(prefix)),
@@ -1288,6 +1345,221 @@ function wireLibraryControls(): void {
     });
   } catch {
     // storage API unavailable (tests) — panel refresh happens on open.
+  }
+}
+
+/* ---------------------------------------------------------------- online search */
+
+function renderOnlineSearchEmpty(message: string): void {
+  const list = ui.onlineSearchList;
+  if (!list) return;
+  list.textContent = '';
+  const empty = document.createElement('li');
+  empty.textContent = message;
+  list.append(empty);
+}
+
+function wireOnlineSearchUi(): void {
+  if (!ui.onlineSearchMedia) return;
+
+  ui.onlineSearchMedia.textContent = libraryMediaLabel();
+
+  if (ui.onlineSearchInput && !ui.onlineSearchInput.value && currentMediaTitle) {
+    ui.onlineSearchInput.value = currentMediaTitle + (currentMediaCreators.length > 0 ? ' ' + currentMediaCreators[0] : '');
+  }
+
+  // Segment handlers
+  const typeSegments = ui.onlineSearchPanel?.querySelectorAll<HTMLButtonElement>('[data-search-type]') || [];
+  typeSegments.forEach(btn => {
+    btn.addEventListener('click', () => {
+      typeSegments.forEach(b => b.classList.remove('is-on'));
+      btn.classList.add('is-on');
+    });
+  });
+
+  const platSegments = ui.onlineSearchPanel?.querySelectorAll<HTMLButtonElement>('[data-search-platform]') || [];
+  platSegments.forEach(btn => {
+    btn.addEventListener('click', () => {
+      platSegments.forEach(b => b.classList.remove('is-on'));
+      btn.classList.add('is-on');
+    });
+  });
+
+  ui.onlineSearchInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      ui.onlineSearchBtn?.click();
+    }
+  });
+
+  ui.onlineSearchBtn?.addEventListener('click', () => {
+    void executeOnlineSearch();
+  });
+}
+
+async function executeOnlineSearch(): Promise<void> {
+  const query = ui.onlineSearchInput?.value.trim();
+  if (!query) return;
+
+  const typeBtn = ui.onlineSearchPanel?.querySelector<HTMLButtonElement>('[data-search-type].is-on');
+  const platBtn = ui.onlineSearchPanel?.querySelector<HTMLButtonElement>('[data-search-platform].is-on');
+
+  const searchType = (typeBtn?.dataset.searchType || 'song') as SearchType;
+  const platform = (platBtn?.dataset.searchPlatform || 'qqmusic') as SearchPlatform;
+
+  if (ui.onlineSearchStatus) ui.onlineSearchStatus.textContent = '搜索中…';
+  if (ui.onlineSearchBtn) ui.onlineSearchBtn.disabled = true;
+  renderOnlineSearchEmpty('搜索中…');
+
+  try {
+    const req: LyricSearchRequest = { query, platform, searchType, limit: 20 };
+    const response = await chrome.runtime.sendMessage({
+      kind: 'lyric-stage-search-request',
+      request: req,
+    });
+
+    if (!response || !response.ok) {
+      throw new Error(response?.reason || 'Search failed');
+    }
+
+    const items = response.items as LyricSearchResultItem[];
+    if (items.length === 0) {
+      renderOnlineSearchEmpty('未找到相关结果');
+    } else {
+      renderSearchResults(items);
+    }
+  } catch (error) {
+    renderOnlineSearchEmpty(`搜索出错: ${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    if (ui.onlineSearchStatus) ui.onlineSearchStatus.textContent = '';
+    if (ui.onlineSearchBtn) ui.onlineSearchBtn.disabled = false;
+  }
+}
+
+function renderSearchResults(items: LyricSearchResultItem[]): void {
+  const list = ui.onlineSearchList;
+  if (!list) return;
+  list.textContent = '';
+  list.setAttribute('role', 'listbox');
+
+  for (const item of items) {
+    const li = document.createElement('li');
+    li.setAttribute('role', 'option');
+    li.tabIndex = 0;
+
+    const title = document.createElement('span');
+    title.className = 'lib-title';
+    title.textContent = item.artists.length > 0
+      ? `${item.title} · ${item.artists.join(' / ')}`
+      : item.title;
+
+    const badge = document.createElement('span');
+    badge.className = 'lib-badge';
+    if (item.album) {
+      badge.textContent = item.album;
+    } else if (item.snippet) {
+      // Snippets often contain HTML tags (like <em> or <b>) from the search API
+      const stripped = item.snippet.replace(/<[^>]+>/g, '').substring(0, 15);
+      badge.textContent = stripped + '...';
+    }
+
+    li.append(title, badge);
+
+    li.addEventListener('click', () => {
+      void selectSearchResult(item);
+    });
+    li.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        void selectSearchResult(item);
+      }
+    });
+
+    list.append(li);
+  }
+}
+
+async function selectSearchResult(item: LyricSearchResultItem): Promise<void> {
+  if (ui.onlineSearchStatus) ui.onlineSearchStatus.textContent = '获取歌词中…';
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      kind: 'lyric-stage-fetch-lyric-request',
+      request: { platform: item.platform, externalId: item.externalId },
+    });
+
+    if (!response || !response.ok) {
+      throw new Error(response?.reason || 'Fetch failed');
+    }
+
+    const lyricData = response.lyric as PortableLyricText;
+
+    // Close search panel temporarily to show preview
+    onlineSearchOpen = false;
+    syncSettingsUi();
+
+    // Preview
+    applyLyricDocument({
+      mediaId: currentMediaId ?? 'preview',
+      format: lyricData.format,
+      text: lyricData.text,
+      sourceName: `search:${item.title}`,
+      revision: lyricRevision + 1,
+      ...(lyricData.translationText ? { translationText: lyricData.translationText } : {}),
+      ...(lyricData.pronunciationText ? { pronunciationText: lyricData.pronunciationText } : {}),
+    });
+
+    // Ask user
+    showInteractiveToast(
+      '<div>歌词对吗？</div><div class="surface-toast-actions"><button type="button" data-action="yes">是</button><button type="button" data-action="no">否</button></div>',
+      (action) => {
+        if (action === 'yes') {
+          void confirmAndSaveSearchResult(item, lyricData);
+        } else {
+          // Revert preview and reopen search
+          applyLyricDocument(null);
+          onlineSearchOpen = true;
+          syncSettingsUi();
+        }
+      }
+    );
+
+  } catch (error) {
+    showLibraryToast(`获取失败: ${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    if (ui.onlineSearchStatus) ui.onlineSearchStatus.textContent = '';
+  }
+}
+
+async function confirmAndSaveSearchResult(item: LyricSearchResultItem, lyricData: PortableLyricText): Promise<void> {
+  if (!currentMediaId) return;
+  try {
+    const record = await lyricLibrary.upsert({
+      title: item.title,
+      creators: item.artists,
+      format: lyricData.format,
+      text: lyricData.text,
+      ...(lyricData.translationText ? { translationText: lyricData.translationText } : {}),
+      ...(lyricData.pronunciationText ? { pronunciationText: lyricData.pronunciationText } : {}),
+    });
+    await lyricLibrary.setPreference(currentMediaId, { lyricId: record.id });
+
+    // Lock it so content pushes don't overwrite it
+    const revisionBefore = lyricRevision;
+    applyLyricDocument({
+      mediaId: currentMediaId,
+      format: record.format,
+      text: record.text,
+      sourceName: `library:${record.title}`,
+      revision: lyricRevision + 1,
+      ...(record.translationText ? { translationText: record.translationText } : {}),
+      ...(record.pronunciationText ? { pronunciationText: record.pronunciationText } : {}),
+    });
+    manualLibraryLock = lyricRevision > revisionBefore && lyricMediaId === currentMediaId;
+
+    showLibraryToast('✓ 已应用歌词');
+  } catch (e) {
+    showLibraryToast(`保存失败: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 

@@ -97,6 +97,30 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
     return true;
   }
 
+  // Forward search and fetch requests to the active content tab
+  const kind = (message as { kind?: string } | null)?.kind;
+  if (kind === 'lyric-stage-search-request' || kind === 'lyric-stage-fetch-lyric-request') {
+    const targetSessionId = registry.selectedSessionId;
+    let targetPort: chrome.runtime.Port | null = null;
+    if (targetSessionId) {
+      for (const source of contentSources.values()) {
+        if (source.sessionId === targetSessionId) {
+          targetPort = source.port;
+          break;
+        }
+      }
+    }
+    const tabId = targetPort?.sender?.tab?.id;
+    if (tabId === undefined) {
+      sendResponse({ ok: false, reason: 'no-active-tab' });
+      return false;
+    }
+    chrome.tabs.sendMessage(tabId, message, (response: unknown) => {
+      sendResponse(response);
+    });
+    return true;
+  }
+
   const envelope = parseMessageEnvelopeV1(message);
   if (!envelope.ok) {
     sendResponse({ ok: false, code: 'invalid-envelope' });

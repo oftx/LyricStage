@@ -26,7 +26,9 @@ import {
   parseYouTubeRoute,
   parseBilibiliRoute,
   isQqPlayerPage,
+  searchPlatformLyrics,
   type PortableLyricText,
+  type LyricSearchRequest,
 } from '@lyric-stage/platform-adapters';
 import { createPageClockClient } from './page-clock-client.js';
 import { loadAppleMusicLyricText } from './musickit-lyrics-client.js';
@@ -1189,6 +1191,20 @@ if (runtimeActive) {
       void refreshAndPublishLyrics(true);
       publishSnapshot();
       sendResponse({ ok, sessionId, mediaId, republished: true });
+      return true;
+    }
+    if (kind === 'lyric-stage-search-request') {
+      const req = (message as { request: LyricSearchRequest }).request;
+      void searchPlatformLyrics(req).then((result) => {
+        sendResponse(result);
+      });
+      return true; // Keep channel open for async response
+    }
+    if (kind === 'lyric-stage-fetch-lyric-request') {
+      const req = (message as { request: { platform: string, externalId: string } }).request;
+      void loadPlatformLyricText(req as any).then((result) => {
+        sendResponse(result);
+      });
       return true;
     }
     return false;

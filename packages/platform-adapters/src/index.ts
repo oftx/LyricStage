@@ -88,3 +88,19 @@ export type {
   PortableLyricFormat,
   PortableLyricText,
 } from './lyrics/types.js';
+export {
+  searchPlatformLyrics,
+} from './search/search-lyrics.js';
+export {
+  searchNeteaseLyrics,
+} from './search/netease-search-source.js';
+export {
+  searchQqLyrics,
+} from './search/qqmusic-search-source.js';
+export type {
+  LyricSearchRequest,
+  LyricSearchResult,
+  LyricSearchResultItem,
+  SearchPlatform,
+  SearchType,
+} from './search/types.js';

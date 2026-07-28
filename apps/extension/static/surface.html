@@ -104,7 +104,7 @@
       inset: 0;
       display: grid;
       place-items: center;
-      pointer-events: none;
+      pointer-events: auto;
       color: var(--muted);
       padding: 24px;
       text-align: center;
@@ -114,6 +114,11 @@
     html[data-chrome-theme="light"] .overlay-empty {
       background: linear-gradient(180deg, rgb(255 255 255 / 45%), rgb(255 255 255 / 65%));
     }
+    .empty-link {
+      appearance: none; border: 0; background: transparent; padding: 0;
+      color: var(--accent); cursor: pointer; font: inherit; text-decoration: underline;
+    }
+    .empty-link:hover { color: color-mix(in srgb, var(--accent) 80%, #fff); }
     .dot {
       width: 8px;
       height: 8px;
@@ -285,7 +290,8 @@
        flex/grid child it squeezed main to a sliver (half the panel visually
        clipped) and collided with the floating buttons and hint text. */
     body[data-panel="true"] .settings-panel,
-    body[data-panel="true"] .library-panel {
+    body[data-panel="true"] .library-panel,
+    body[data-panel="true"] .online-search-panel {
       position: absolute;
       top: 76px; right: 8px;
       width: min(340px, calc(100% - 16px));
@@ -314,6 +320,13 @@
       pointer-events: none;
     }
     .surface-toast[data-show="true"] { opacity: 1; }
+    .surface-toast[data-interactive="true"] { pointer-events: auto; }
+    .surface-toast-actions { display: flex; gap: 8px; margin-top: 6px; justify-content: center; }
+    .surface-toast-actions button {
+      appearance: none; font: inherit; font-size: 11px; padding: 2px 10px; border-radius: 4px;
+      border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 60%, transparent); color: var(--fg); cursor: pointer;
+    }
+    .surface-toast-actions button:hover { background: color-mix(in srgb, var(--accent) 30%, transparent); border-color: var(--accent); }
     .lib-action[data-confirm="true"] {
       background: #c53030; border-color: #c53030; color: #fff;
     }
@@ -325,7 +338,7 @@
     .library-row { align-items: flex-start; }
     .library-controls { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
     .library-media { font-size: 12px; opacity: 0.75; word-break: break-all; }
-    #library-search {
+    #library-search, .library-search-input {
       font: inherit; font-size: 12px; padding: 4px 8px; border-radius: 6px;
       border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
       background: transparent; color: inherit;
@@ -397,6 +410,9 @@
       </button>
       <button type="button" class="chrome-btn" id="toggle-library" aria-pressed="false" aria-controls="library-panel" title="歌词库">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7"/><path d="M9 11h7"/></svg>
+      </button>
+      <button type="button" class="chrome-btn" id="toggle-online-search" aria-pressed="false" aria-controls="online-search-panel" title="在线搜索">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
       </button>
       <button type="button" class="chrome-btn" id="toggle-pip" aria-pressed="false" title="画中画">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10c0 1.1.9 2 2 2h4"/><rect x="12" y="13" width="10" height="7" rx="2"/></svg>
@@ -476,6 +492,27 @@
           </div>
         </div>
       </div>
+    </div>
+  </section>
+  <section class="settings-panel online-search-panel" id="online-search-panel" hidden aria-label="在线搜索">
+    <div class="library-controls" style="width: 100%;">
+      <div class="library-media" id="online-search-media">—</div>
+      <div style="display: flex; gap: 8px;">
+        <input type="search" id="online-search-input" placeholder="搜索标题 / 创作者" aria-label="搜索歌词" style="flex: 1;" class="library-search-input">
+        <button type="button" class="toggle" id="online-search-btn">搜索</button>
+      </div>
+      <div class="library-actions" style="margin-top: 4px;">
+        <div class="segmented" role="group" aria-label="搜索类型">
+          <button type="button" class="segment is-on" data-search-type="song">单曲</button>
+          <button type="button" class="segment" data-search-type="lyric">歌词</button>
+        </div>
+        <div class="segmented" role="group" aria-label="搜索引擎">
+          <button type="button" class="segment is-on" data-search-platform="qqmusic">QQ音乐</button>
+          <button type="button" class="segment" data-search-platform="netease">网易云</button>
+        </div>
+      </div>
+      <ul class="library-list" id="online-search-list" aria-label="在线搜索结果"></ul>
+      <div class="library-status" id="online-search-status" role="status" aria-live="polite"></div>
     </div>
   </section>
   <div class="status-bar" id="live" hidden>
