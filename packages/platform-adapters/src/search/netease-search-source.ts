@@ -2,8 +2,7 @@ import { weapiEncrypt } from '../lyrics/netease-weapi-crypto.js';
 import type { LyricSearchRequest, LyricSearchResult, LyricSearchResultItem } from './types.js';
 
 export async function searchNeteaseLyrics(request: LyricSearchRequest): Promise<LyricSearchResult> {
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://music.163.com';
-  const url = new URL('/weapi/cloudsearch/get/web', origin);
+  const url = new URL('/weapi/search/get', 'https://music.163.com');
 
   // Need csrf token from cookie
   const csrf = typeof document !== 'undefined' ? (document.cookie.match(/__csrf=([^;]+)/)?.[1] ?? '') : '';
@@ -26,7 +25,7 @@ export async function searchNeteaseLyrics(request: LyricSearchRequest): Promise<
     return { ok: false, reason: 'netease-search-encrypt-failed' };
   }
 
-  let response: Response;
+  let proxyResponse: { ok: boolean; status?: number; text?: string; error?: string };
   try {
     const init: RequestInit = {
       method: 'POST',
@@ -34,8 +33,27 @@ export async function searchNeteaseLyrics(request: LyricSearchRequest): Promise<
       credentials: 'include',
       body: `params=${encodeURIComponent(encrypted.params)}&encSecKey=${encodeURIComponent(encrypted.encSecKey)}`,
     };
-    if (request.signal) init.signal = request.signal;
-    response = await fetch(url, init);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chromeObj = typeof window !== 'undefined' ? (window as any).chrome : undefined;
+    const isNeteaseOrigin = typeof window !== 'undefined' && window.location.hostname.includes('music.163.com');
+
+    if (!isNeteaseOrigin && chromeObj?.runtime?.sendMessage) {
+      proxyResponse = await chromeObj.runtime.sendMessage({
+        kind: 'lyric-stage-fetch-proxy',
+        request: { url: url.toString(), init },
+      });
+      if (!proxyResponse) throw new Error('No response from fetch proxy');
+      if (proxyResponse.error) throw new Error(proxyResponse.error);
+    } else {
+      if (request.signal) init.signal = request.signal;
+      const response = await fetch(url, init);
+      proxyResponse = {
+        ok: response.ok,
+        status: response.status,
+        text: await response.text(),
+      };
+    }
   } catch (error) {
     return {
       ok: false,
@@ -43,14 +61,14 @@ export async function searchNeteaseLyrics(request: LyricSearchRequest): Promise<
     };
   }
 
-  if (!response.ok) {
-    return { ok: false, reason: `netease-search-http-${response.status}` };
+  if (!proxyResponse.ok) {
+    return { ok: false, reason: `netease-search-http-${proxyResponse.status}` };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let payload: any;
   try {
-    payload = await response.json();
+    payload = JSON.parse(proxyResponse.text || '{}');
   } catch {
     return { ok: false, reason: 'netease-search-invalid-json' };
   }
