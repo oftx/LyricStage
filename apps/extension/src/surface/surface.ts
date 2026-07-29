@@ -882,6 +882,8 @@ function scheduleUiLoop(): void {
   }, UI_IDLE_INTERVAL_MS);
 }
 
+let lastPaintedEmptyState = '';
+
 function paint(): void {
   const held = clock.getHeld();
   const projected = projectSparseAnchor(held, performance.now());
@@ -891,7 +893,8 @@ function paint(): void {
   if ((!projected || !held) && !hasLyrics) {
     ui.empty?.removeAttribute('hidden');
     ui.live?.setAttribute('hidden', '');
-    if (ui.empty) {
+    if (ui.empty && lastPaintedEmptyState !== 'waiting') {
+      lastPaintedEmptyState = 'waiting';
       ui.empty.textContent = '等待播放会话 — 在支持的网站播放音乐或视频后，歌词将显示在这里';
     }
     return;
@@ -900,7 +903,8 @@ function paint(): void {
     // Session alive but no lyric bound: the old code hid the overlay and
     // left a blank void with no call to action (review finding).
     ui.empty?.removeAttribute('hidden');
-    if (ui.empty) {
+    if (ui.empty && lastPaintedEmptyState !== 'no-lyrics') {
+      lastPaintedEmptyState = 'no-lyrics';
       ui.empty.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 8px;">
           <div>未找到匹配歌词</div>
@@ -931,6 +935,7 @@ function paint(): void {
       });
     }
   } else {
+    lastPaintedEmptyState = 'hidden';
     ui.empty?.setAttribute('hidden', '');
   }
   ui.live?.removeAttribute('hidden');
