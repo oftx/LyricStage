@@ -232,12 +232,12 @@ const DEACTIVATE_MIX_DELAY_MS = 250;
 const DEACTIVATE_MIX_DURATION_MS = 350;
 /**
  * Native line-timed CSS defaults (base.css active/deactivate):
- * delay 75ms + duration 90ms linear mid-window fill.
+ * delay 120ms + duration 80ms linear mid-window fill.
  */
-const LINE_ACTIVATE_MIX_DELAY_MS = 75;
-const LINE_ACTIVATE_MIX_DURATION_MS = 90;
-const LINE_DEACTIVATE_MIX_DELAY_MS = 75;
-const LINE_DEACTIVATE_MIX_DURATION_MS = 90;
+const LINE_ACTIVATE_MIX_DELAY_MS = 120;
+const LINE_ACTIVATE_MIX_DURATION_MS = 80;
+const LINE_DEACTIVATE_MIX_DELAY_MS = 120;
+const LINE_DEACTIVATE_MIX_DURATION_MS = 80;
 const POST_END_EFFECT_TAIL_MS = 3_000;
 const BINDING_RESOURCE_PREWARM_MS = 100;
 const BINDING_TRANSFORM_EPSILON = 0.000_01;
