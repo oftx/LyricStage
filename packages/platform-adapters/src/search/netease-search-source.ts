@@ -79,14 +79,22 @@ export async function searchNeteaseLyrics(request: LyricSearchRequest): Promise<
 
   const songs = payload.result?.songs || [];
   const items: LyricSearchResultItem[] = songs.map((s: any) => {
+    const artistsArr = s.artists || s.ar || [];
+    const albumName = s.album?.name || s.al?.name;
+    const duration = typeof s.duration === 'number' ? s.duration : s.dt;
+    let snippet: string | undefined;
+    if (s.lyrics) {
+      snippet = Array.isArray(s.lyrics) ? s.lyrics[0] : s.lyrics.txt;
+    }
+
     return {
       platform: 'netease',
       externalId: String(s.id),
       title: s.name,
-      artists: (s.ar || []).map((a: any) => a.name),
-      ...(s.al?.name ? { album: s.al.name } : {}),
-      ...(typeof s.dt === 'number' ? { durationMs: s.dt } : {}),
-      ...(s.lyrics && s.lyrics.length > 0 ? { snippet: s.lyrics[0] } : {}),
+      artists: artistsArr.map((a: any) => a.name),
+      ...(albumName ? { album: albumName } : {}),
+      ...(typeof duration === 'number' ? { durationMs: duration } : {}),
+      ...(snippet ? { snippet } : {}),
     };
   });
 
