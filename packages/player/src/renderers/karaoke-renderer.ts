@@ -66,7 +66,11 @@ export interface KaraokeRenderOptions {
    * time-based activeLineIds — matches native line-timed pre-anchor handoff.
    */
   readonly visualPrimaryLineIds?: ReadonlySet<string> | null;
-  /** Opacity transition duration matched to concurrent row-move (line mode). */
+  /**
+   * Primary-fill transition duration matched to a concurrent row move. The
+   * renderer samples this against playback time, so callers using a
+   * rate-adjusted WAAPI row move must supply the matching media-time span.
+   */
   readonly alphaDurationMs?: number;
   readonly alphaDelayMs?: number;
   /** Only these lines receive mid-move fill timing (usually the new focus). */
@@ -228,7 +232,7 @@ interface PaintContext {
 
 /** Karaoke word-mode row mix (legacy AM karaoke alpha). */
 const ACTIVATE_MIX_DURATION_MS = 250;
-const DEACTIVATE_MIX_DELAY_MS = 250;
+const DEACTIVATE_MIX_DELAY_MS = 0;
 const DEACTIVATE_MIX_DURATION_MS = 350;
 /**
  * Native line-timed CSS defaults (base.css active/deactivate):
@@ -1727,11 +1731,12 @@ class KaraokeRendererImpl implements KaraokeRenderer {
         const alphaTimingAllowed =
           !context.alphaTimingLineIds
           || context.alphaTimingLineIds.has(row.line.id);
+        // The row-move handoff is also used by word-timed karaoke pre-anchor:
+        // the old full-word mask must fade over that same media-time window,
+        // rather than waiting for the authored next-line boundary. It applies
+        // to both sides of the handoff (activate and deactivate).
         const useMidMove =
-          context.lineTimedMix
-          && alphaTimingAllowed
-          && context.alphaDurationMs !== null
-          && (active || state.transition?.kind === "deactivate");
+          alphaTimingAllowed && context.alphaDurationMs !== null;
         let delayMs: number;
         let durationMs: number;
         if (useMidMove && context.alphaDurationMs !== null) {
@@ -1757,7 +1762,10 @@ class KaraokeRendererImpl implements KaraokeRenderer {
           durationMs,
           from: state.mix,
           to: targetMix,
-          linear: context.lineTimedMix,
+          // A move-coupled fill must share the move's linear time base even
+          // in karaoke mode; otherwise its eased 350ms tail can outlive the
+          // FLIP that it is meant to visually accompany.
+          linear: context.lineTimedMix || useMidMove,
         };
         this.#transientLineIds.add(row.line.id);
       }

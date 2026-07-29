@@ -330,6 +330,8 @@ function foregroundSecondaryLaneState(
 }
 
 interface KaraokePreAnchorMotionState {
+  /** Sung line whose completed white mask leaves with the pre-anchor move. */
+  readonly previousLineId: string;
   readonly targetLineId: string;
   readonly authoredBeginMs: number;
   readonly visualFocusLineId: string;
@@ -2989,6 +2991,7 @@ class LyricsPlayerControllerImpl implements LyricsPlayerController {
           }
         }
         this.#karaokePreAnchorMotion = Object.freeze({
+          previousLineId: linePreAnchor.previousLineId,
           targetLineId: linePreAnchor.targetLineId,
           authoredBeginMs: linePreAnchor.authoredBeginMs,
           visualFocusLineId: projectedPreAnchorPolicy.visualFocusLineId,
@@ -3297,6 +3300,32 @@ class LyricsPlayerControllerImpl implements LyricsPlayerController {
       const moveDurationForFill = clickSeekFrame
         ? clickSeekMoveDurationMs
         : playbackMoveDurationMs;
+      // Long karaoke gaps start a geometry-only pre-anchor before the next
+      // authored word. Previously that motion kept the outgoing line as the
+      // primary karaoke owner, so its completed white mask began fading only
+      // *after* the FLIP had settled at the next line's boundary. Transfer
+      // primary ownership at the pre-anchor's first frame instead. The target
+      // has no active word yet, hence its sweep remains empty; only the old
+      // fill fades while both rows move.
+      const preAnchorPaintHandoff =
+        preAnchorShouldStart &&
+        activePreAnchorMotion !== null &&
+        linePreAnchor !== null
+          ? Object.freeze({
+              alphaTimingLineIds: new Set<string>([
+                activePreAnchorMotion.previousLineId,
+                activePreAnchorMotion.targetLineId,
+              ]),
+              rowDurationMs: playbackMoveDurationMs,
+              mediaDurationMs: Math.max(
+                0,
+                linePreAnchor.authoredBeginMs - nextFrame.playbackPositionMs,
+              ),
+            })
+          : null;
+      const preAnchorVisualPrimaryLineIds = activePreAnchorMotion
+        ? activePreAnchorMotion.scaleActiveLineIds
+        : null;
       const motionPaintFocusLineId = visibilityResume || activePreAnchorMotion
         ? null
         : (shouldCaptureRowMove && focusWillMove
@@ -3306,13 +3335,14 @@ class LyricsPlayerControllerImpl implements LyricsPlayerController {
       // focus handoff. Painting only the focus line demotes partners → shrink,
       // then they re-activate when motion ends → grow jump (user report on
       // multi-line simultaneous line-timed lyrics).
-      const visualPrimaryLineIds = motionPaintFocusLineId
-        ? new Set<string>([
-          ...nextFrame.activeLineIds,
-          ...nextFrame.concurrentPrimaryTailLineIds,
-          motionPaintFocusLineId,
-        ])
-        : null;
+      const visualPrimaryLineIds = preAnchorVisualPrimaryLineIds
+        ?? (motionPaintFocusLineId
+          ? new Set<string>([
+            ...nextFrame.activeLineIds,
+            ...nextFrame.concurrentPrimaryTailLineIds,
+            motionPaintFocusLineId,
+          ])
+          : null);
       const motionScaleActiveLineIds = visualPrimaryLineIds
         ?? (activePreAnchorMotion
           ? activePreAnchorMotion.scaleActiveLineIds
@@ -3339,19 +3369,36 @@ class LyricsPlayerControllerImpl implements LyricsPlayerController {
               alphaTimingLineIds: new Set<string>([motionPaintFocusLineId]),
             }
           : null;
+      // CSS row opacity follows wall-clock WAAPI duration, while karaoke mask
+      // paint is sampled in media time. At non-1x playback they deliberately
+      // differ by the playback rate, yet both finish on the authored boundary.
+      const preAnchorRowFill = preAnchorPaintHandoff
+        ? {
+            alphaDurationMs: preAnchorPaintHandoff.rowDurationMs,
+            alphaDelayMs: 0,
+            alphaTimingLineIds: preAnchorPaintHandoff.alphaTimingLineIds,
+          }
+        : null;
+      const preAnchorKaraokeFill = preAnchorPaintHandoff
+        ? {
+            alphaDurationMs: preAnchorPaintHandoff.mediaDurationMs,
+            alphaDelayMs: 0,
+            alphaTimingLineIds: preAnchorPaintHandoff.alphaTimingLineIds,
+          }
+        : null;
 
       try {
         this.#lineTimedRenderer?.renderFrame(nextFrame, {
           reducedMotion: this.#options.reducedMotion || visibilityResume,
           paintSuppressedLineIds,
-          visualStyleFocusLineId,
+          visualStyleFocusLineId: layoutVisualStyleFocusLineId,
           ...(activePreAnchorMotion
             ? { scaleActiveLineIds: activePreAnchorMotion.scaleActiveLineIds }
             : motionScaleActiveLineIds
               ? { scaleActiveLineIds: motionScaleActiveLineIds }
               : {}),
           ...(visualPrimaryLineIds ? { visualPrimaryLineIds } : {}),
-          ...(midMoveFill ?? {}),
+          ...(preAnchorRowFill ?? midMoveFill ?? {}),
         });
         this.#duetRenderer?.renderFrame(nextFrame);
         this.#instrumentalRenderer?.renderFrame(nextFrame, {
@@ -3575,9 +3622,10 @@ class LyricsPlayerControllerImpl implements LyricsPlayerController {
           }
         }
 
-        // Line-timed (lrc) paint must share visual primary + mid-move alpha
-        // timing with the row renderer so whole-line fill matches native LRC.
-        const lineTimedKaraokeOptions =
+        // Whole-line mode shares the existing line renderer timing. Karaoke
+        // receives the same visual-primary handoff only for a long-gap
+        // pre-anchor, with a media-time fade clock for its word masks.
+        const karaokePaintOptions =
           this.#options.displayMode === "lrc"
             ? {
                 ...(visualPrimaryLineIds
@@ -3585,18 +3633,25 @@ class LyricsPlayerControllerImpl implements LyricsPlayerController {
                   : {}),
                 ...(midMoveFill ?? {}),
               }
-            : {};
+            : preAnchorVisualPrimaryLineIds
+              ? {
+                  ...(visualPrimaryLineIds
+                    ? { visualPrimaryLineIds }
+                    : {}),
+                  ...(preAnchorKaraokeFill ?? {}),
+                }
+              : {};
         this.#karaokeRenderer?.renderFrame(nextFrame, {
           reducedMotion: this.#options.reducedMotion || visibilityResume,
           playing: snapshot.playing,
           paintSuppressedLineIds,
-          ...lineTimedKaraokeOptions,
+          ...karaokePaintOptions,
         });
         this.#backgroundTrackRenderer?.renderFrame(nextFrame, {
           reducedMotion: this.#options.reducedMotion || visibilityResume,
           playing: snapshot.playing,
           paintSuppressedLineIds,
-          ...lineTimedKaraokeOptions,
+          ...karaokePaintOptions,
         });
         this.#scrollOwner = nextScrollOwner;
         if (preAnchorHandoffMatches) {
