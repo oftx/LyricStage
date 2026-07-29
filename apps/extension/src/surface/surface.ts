@@ -127,7 +127,6 @@ function effectiveDisplayMode(): SurfacePreferences['displayMode'] {
 let settingsOpen = false;
 let libraryOpen = false;
 let onlineSearchOpen = false;
-let lastAutoFilledSearchQuery = '';
 let themeMediaQuery: MediaQueryList | null = null;
 /** Avoid stacking concurrent artwork loads when toggling cover rapidly. */
 let artworkRequestId = 0;
@@ -1060,14 +1059,8 @@ function connect(): void {
         ui.onlineSearchMedia.textContent = libraryMediaLabel();
       }
 
-      if (ui.onlineSearchInput && currentMediaTitle) {
-        const isFocused = document.activeElement === ui.onlineSearchInput;
-        const isUntouched = !ui.onlineSearchInput.value || ui.onlineSearchInput.value === lastAutoFilledSearchQuery;
-        if (!isFocused && isUntouched) {
-          const newValue = currentMediaTitle + (currentMediaCreators.length > 0 ? ' ' + currentMediaCreators[0] : '');
-          ui.onlineSearchInput.value = newValue;
-          lastAutoFilledSearchQuery = newValue;
-        }
+      if (ui.onlineSearchInput && currentMediaTitle && !onlineSearchOpen) {
+        ui.onlineSearchInput.value = currentMediaTitle + (currentMediaCreators.length > 0 ? ' ' + currentMediaCreators[0] : '');
       }
       if (ui.onlineSearchList) {
         ui.onlineSearchList.querySelectorAll<HTMLElement>('[data-active="true"], [aria-selected="true"]').forEach(el => {
@@ -1381,11 +1374,8 @@ function wireOnlineSearchUi(): void {
 
   ui.onlineSearchMedia.textContent = libraryMediaLabel();
 
-  if (ui.onlineSearchInput && !ui.onlineSearchInput.value && currentMediaTitle
-      && document.activeElement !== ui.onlineSearchInput) {
-    const newValue = currentMediaTitle + (currentMediaCreators.length > 0 ? ' ' + currentMediaCreators[0] : '');
-    ui.onlineSearchInput.value = newValue;
-    lastAutoFilledSearchQuery = newValue;
+  if (ui.onlineSearchInput && !ui.onlineSearchInput.value && currentMediaTitle) {
+    ui.onlineSearchInput.value = currentMediaTitle + (currentMediaCreators.length > 0 ? ' ' + currentMediaCreators[0] : '');
   }
 
   // Segment handlers
