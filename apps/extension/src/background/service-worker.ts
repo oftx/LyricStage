@@ -121,6 +121,24 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
     return true;
   }
 
+  // Handle cross-origin fetch proxy requests from content scripts
+  if (kind === 'lyric-stage-fetch-proxy') {
+    const req = (message as any).request;
+    fetch(req.url, req.init)
+      .then(async (response) => {
+        const text = await response.text();
+        sendResponse({
+          ok: response.ok,
+          status: response.status,
+          text,
+        });
+      })
+      .catch((error) => {
+        sendResponse({ ok: false, error: error.message });
+      });
+    return true;
+  }
+
   const envelope = parseMessageEnvelopeV1(message);
   if (!envelope.ok) {
     sendResponse({ ok: false, code: 'invalid-envelope' });

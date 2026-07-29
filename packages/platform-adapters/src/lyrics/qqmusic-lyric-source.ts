@@ -33,6 +33,22 @@ async function fetchText(
   signal?: AbortSignal,
 ): Promise<string> {
   const next: RequestInit = { ...init };
+  // Check if we can use normal fetch (same origin) or need proxy
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const chromeObj = typeof window !== 'undefined' ? (window as any).chrome : undefined;
+  const isQqOrigin = typeof window !== 'undefined' && window.location.hostname.includes('y.qq.com');
+
+  if (!isQqOrigin && chromeObj?.runtime?.sendMessage) {
+    const proxyResponse = await chromeObj.runtime.sendMessage({
+      kind: 'lyric-stage-fetch-proxy',
+      request: { url, init: next },
+    });
+    if (!proxyResponse) throw new Error('No response from fetch proxy');
+    if (proxyResponse.error) throw new Error(proxyResponse.error);
+    if (!proxyResponse.ok) throw new Error(`qq-http-${proxyResponse.status}`);
+    return proxyResponse.text || '';
+  }
+
   if (signal) next.signal = signal;
   const response = await fetch(url, next);
   if (!response.ok) {

@@ -8,7 +8,7 @@ export async function searchQqLyrics(request: LyricSearchRequest): Promise<Lyric
   url.searchParams.set('n', String(request.limit ?? 20));
   url.searchParams.set('format', 'json');
 
-  let response: Response;
+  let proxyResponse: { ok: boolean; status?: number; text?: string; error?: string };
   try {
     const init: RequestInit = {
       method: 'GET',
@@ -16,8 +16,27 @@ export async function searchQqLyrics(request: LyricSearchRequest): Promise<Lyric
         'Referer': 'https://y.qq.com/',
       },
     };
-    if (request.signal) init.signal = request.signal;
-    response = await fetch(url, init);
+    // Send to background script proxy to bypass CORS
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chromeObj = typeof window !== 'undefined' ? (window as any).chrome : undefined;
+    const isQqOrigin = typeof window !== 'undefined' && window.location.hostname.includes('y.qq.com');
+
+    if (!isQqOrigin && chromeObj?.runtime?.sendMessage) {
+      proxyResponse = await chromeObj.runtime.sendMessage({
+        kind: 'lyric-stage-fetch-proxy',
+        request: { url: url.toString(), init },
+      });
+      if (!proxyResponse) throw new Error('No response from fetch proxy');
+      if (proxyResponse.error) throw new Error(proxyResponse.error);
+    } else {
+      if (request.signal) init.signal = request.signal;
+      const response = await fetch(url, init);
+      proxyResponse = {
+        ok: response.ok,
+        status: response.status,
+        text: await response.text(),
+      };
+    }
   } catch (error) {
     return {
       ok: false,
@@ -25,14 +44,14 @@ export async function searchQqLyrics(request: LyricSearchRequest): Promise<Lyric
     };
   }
 
-  if (!response.ok) {
-    return { ok: false, reason: `qqmusic-search-http-${response.status}` };
+  if (!proxyResponse.ok) {
+    return { ok: false, reason: `qqmusic-search-http-${proxyResponse.status}` };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let payload: any;
   try {
-    payload = await response.json();
+    payload = JSON.parse(proxyResponse.text || '{}');
   } catch {
     return { ok: false, reason: 'qqmusic-search-invalid-json' };
   }
