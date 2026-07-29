@@ -358,8 +358,11 @@
       font-weight: 650;
     }
     .library-list li .lib-title { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: normal; word-break: break-word; max-width: 100%; }
+    .library-list li:has(.lib-action) .lib-title { max-width: calc(100% - 60px); }
     .library-list li:has(.lib-badge:not(:empty)) .lib-title { max-width: 85%; }
+    .library-list li:has(.lib-action):has(.lib-badge:not(:empty)) .lib-title { max-width: calc(85% - 60px); }
     .library-list li .lib-badge:not(:empty) { opacity: 0.6; font-size: 11px; margin-left: auto; white-space: normal; word-break: break-word; text-align: right; max-width: 85%; }
+    .library-list li:has(.lib-action) .lib-badge:not(:empty) { max-width: calc(85% - 60px); }
     .library-list li .lib-action {
       font: inherit; font-size: 11px; padding: 4px; border-radius: 4px;
       border: 1px solid transparent;
