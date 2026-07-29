@@ -127,6 +127,7 @@ function effectiveDisplayMode(): SurfacePreferences['displayMode'] {
 let settingsOpen = false;
 let libraryOpen = false;
 let onlineSearchOpen = false;
+let lastAutoFilledSearchQuery = '';
 let themeMediaQuery: MediaQueryList | null = null;
 /** Avoid stacking concurrent artwork loads when toggling cover rapidly. */
 let artworkRequestId = 0;
@@ -1054,6 +1055,27 @@ function connect(): void {
       if (payload.meta.title !== undefined) currentMediaTitle = payload.meta.title;
       if (payload.meta.creators !== undefined) currentMediaCreators = payload.meta.creators;
       if (libraryOpen) void refreshLibraryUi();
+
+      if (ui.onlineSearchMedia) {
+        ui.onlineSearchMedia.textContent = libraryMediaLabel();
+      }
+
+      if (ui.onlineSearchInput && currentMediaTitle) {
+        const isFocused = document.activeElement === ui.onlineSearchInput;
+        const isUntouched = !ui.onlineSearchInput.value || ui.onlineSearchInput.value === lastAutoFilledSearchQuery;
+        if (!isFocused && isUntouched) {
+          const newValue = currentMediaTitle + (currentMediaCreators.length > 0 ? ' ' + currentMediaCreators[0] : '');
+          ui.onlineSearchInput.value = newValue;
+          lastAutoFilledSearchQuery = newValue;
+        }
+      }
+      if (ui.onlineSearchList) {
+        ui.onlineSearchList.querySelectorAll<HTMLElement>('[data-active="true"], [aria-selected="true"]').forEach(el => {
+          delete el.dataset.active;
+          el.setAttribute('aria-selected', 'false');
+        });
+      }
+
       if (lyricMediaId && payload.meta.mediaId !== lyricMediaId) {
         // Ignore cover updates for non-current media.
         return;
@@ -1144,7 +1166,6 @@ let toastTimer: number | null = null;
 function showLibraryToast(text: string): void {
   const toast = ui.surfaceToast;
   if (!toast) return;
-  toast.dataset.interactive = 'false';
   toast.textContent = text;
   toast.dataset.show = 'true';
   if (toastTimer !== null) window.clearTimeout(toastTimer);
@@ -1152,24 +1173,6 @@ function showLibraryToast(text: string): void {
     toastTimer = null;
     toast.dataset.show = 'false';
   }, 2_600);
-}
-
-function showInteractiveToast(html: string, onAction: (action: string) => void): void {
-  const toast = ui.surfaceToast;
-  if (!toast) return;
-  if (toastTimer !== null) { window.clearTimeout(toastTimer); toastTimer = null; }
-  toast.innerHTML = html;
-  toast.dataset.show = 'true';
-  toast.dataset.interactive = 'true';
-  toast.querySelectorAll<HTMLButtonElement>('[data-action]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      onAction(btn.dataset.action!);
-      toast.dataset.show = 'false';
-      toast.dataset.interactive = 'false';
-      toast.innerHTML = '';
-    }, { once: true });
-  });
 }
 
 /* ---------------------------------------------------------------- library */
@@ -1378,8 +1381,11 @@ function wireOnlineSearchUi(): void {
 
   ui.onlineSearchMedia.textContent = libraryMediaLabel();
 
-  if (ui.onlineSearchInput && !ui.onlineSearchInput.value && currentMediaTitle) {
-    ui.onlineSearchInput.value = currentMediaTitle + (currentMediaCreators.length > 0 ? ' ' + currentMediaCreators[0] : '');
+  if (ui.onlineSearchInput && !ui.onlineSearchInput.value && currentMediaTitle
+      && document.activeElement !== ui.onlineSearchInput) {
+    const newValue = currentMediaTitle + (currentMediaCreators.length > 0 ? ' ' + currentMediaCreators[0] : '');
+    ui.onlineSearchInput.value = newValue;
+    lastAutoFilledSearchQuery = newValue;
   }
 
   // Segment handlers
@@ -1480,12 +1486,12 @@ function renderSearchResults(items: LyricSearchResultItem[]): void {
     li.append(title, badge);
 
     li.addEventListener('click', () => {
-      void selectSearchResult(item);
+      void selectSearchResult(item, li);
     });
     li.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        void selectSearchResult(item);
+        void selectSearchResult(item, li);
       }
     });
 
@@ -1493,7 +1499,7 @@ function renderSearchResults(items: LyricSearchResultItem[]): void {
   }
 }
 
-async function selectSearchResult(item: LyricSearchResultItem): Promise<void> {
+async function selectSearchResult(item: LyricSearchResultItem, li: HTMLLIElement): Promise<void> {
   if (ui.onlineSearchStatus) ui.onlineSearchStatus.textContent = '获取歌词中…';
 
   try {
@@ -1508,38 +1514,28 @@ async function selectSearchResult(item: LyricSearchResultItem): Promise<void> {
 
     const lyricData = response.lyric as PortableLyricText;
 
-    // Close search panel temporarily to show preview
+    await confirmAndSaveSearchResult(item, lyricData);
+
+    // Update active state in UI
+    li.parentElement?.querySelectorAll('li[data-active="true"]').forEach(el => {
+      el.removeAttribute('data-active');
+      el.setAttribute('aria-selected', 'false');
+    });
+    li.dataset.active = 'true';
+    li.setAttribute('aria-selected', 'true');
+
     onlineSearchOpen = false;
     syncSettingsUi();
 
-    // Preview
-    applyLyricDocument({
-      mediaId: currentMediaId ?? 'preview',
-      format: lyricData.format,
-      text: lyricData.text,
-      sourceName: `search:${item.title}`,
-      revision: lyricRevision + 1,
-      ...(lyricData.translationText ? { translationText: lyricData.translationText } : {}),
-      ...(lyricData.pronunciationText ? { pronunciationText: lyricData.pronunciationText } : {}),
-    });
-
-    // Ask user
-    showInteractiveToast(
-      '<div>歌词对吗？</div><div class="surface-toast-actions"><button type="button" data-action="yes">是</button><button type="button" data-action="no">否</button></div>',
-      (action) => {
-        if (action === 'yes') {
-          void confirmAndSaveSearchResult(item, lyricData);
-        } else {
-          // Revert preview and reopen search
-          applyLyricDocument(null);
-          onlineSearchOpen = true;
-          syncSettingsUi();
-        }
-      }
-    );
-
   } catch (error) {
-    showLibraryToast(`获取失败: ${error instanceof Error ? error.message : String(error)}`);
+    const friendlyErrors: Record<string, string> = {
+      'netease-no-lyric': '该歌曲无歌词',
+      'netease-cloud-empty': '该歌曲无歌词',
+      'qq-empty-body': '该歌曲无歌词',
+      'netease-invalid-json': '无法获取歌词 (需在网页版登录或接口被拦截)',
+    };
+    const reason = error instanceof Error ? error.message : String(error);
+    showLibraryToast(`获取失败: ${friendlyErrors[reason] || reason}`);
   } finally {
     if (ui.onlineSearchStatus) ui.onlineSearchStatus.textContent = '';
   }
