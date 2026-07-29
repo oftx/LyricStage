@@ -68,33 +68,50 @@ export async function loadNeteaseLyricText(
     return { ok: false, reason: `invalid-netease-id:${songId}` };
   }
 
-  const origin = request.origin
-    ?? (typeof window !== 'undefined' ? window.location.origin : 'https://music.163.com');
-  const url = new URL('/api/song/lyric/v1', origin);
+  const url = new URL('/api/song/lyric/v1', 'https://music.163.com');
   url.searchParams.set('id', songId);
   url.searchParams.set('cp', 'false');
   for (const parameter of ['lv', 'kv', 'tv', 'rv', 'yv', 'ytv', 'yrv']) {
     url.searchParams.set(parameter, '0');
   }
 
-  let response: Response;
+  let proxyResponse: { ok: boolean; status?: number; text?: string; error?: string };
   try {
     const init: RequestInit = { credentials: 'include' };
-    if (request.signal) init.signal = request.signal;
-    response = await fetch(url, init);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chromeObj = typeof window !== 'undefined' ? (window as any).chrome : undefined;
+    const isNeteaseOrigin = typeof window !== 'undefined' && window.location.hostname.includes('music.163.com');
+
+    if (!isNeteaseOrigin && chromeObj?.runtime?.sendMessage) {
+      proxyResponse = await chromeObj.runtime.sendMessage({
+        kind: 'lyric-stage-fetch-proxy',
+        request: { url: url.toString(), init },
+      });
+      if (!proxyResponse) throw new Error('No response from fetch proxy');
+      if (proxyResponse.error) throw new Error(proxyResponse.error);
+    } else {
+      if (request.signal) init.signal = request.signal;
+      const response = await fetch(url, init);
+      proxyResponse = {
+        ok: response.ok,
+        status: response.status,
+        text: await response.text(),
+      };
+    }
   } catch (error) {
     return {
       ok: false,
       reason: error instanceof Error ? error.message : 'netease-fetch-failed',
     };
   }
-  if (!response.ok) {
-    return { ok: false, reason: `netease-http-${response.status}` };
+  if (!proxyResponse.ok) {
+    return { ok: false, reason: `netease-http-${proxyResponse.status}` };
   }
 
   let payload: NeteaseLyricApiResponse;
   try {
-    payload = (await response.json()) as NeteaseLyricApiResponse;
+    payload = JSON.parse(proxyResponse.text || '{}') as NeteaseLyricApiResponse;
   } catch {
     return { ok: false, reason: 'netease-invalid-json' };
   }
@@ -188,8 +205,6 @@ async function loadNeteaseCloudLyricText(
   request: LyricLoadRequest,
 ): Promise<LyricLoadResult> {
   const songId = request.externalId;
-  const origin = request.origin
-    ?? (typeof window !== 'undefined' ? window.location.origin : 'https://music.163.com');
 
   const plaintext = JSON.stringify({
     songId,
@@ -205,13 +220,14 @@ async function loadNeteaseCloudLyricText(
     return { ok: false, reason: 'netease-weapi-encrypt-failed' };
   }
 
-  const url = new URL('/weapi/cloud/lyric/get', origin);
+  const url = new URL('/weapi/cloud/lyric/get', 'https://music.163.com');
   // The weapi endpoint requires the csrf_token query param from the __csrf cookie.
   const csrf = typeof document !== 'undefined'
     ? (document.cookie.match(/__csrf=([^;]+)/)?.[1] ?? '')
     : '';
   if (csrf) url.searchParams.set('csrf_token', csrf);
-  let response: Response;
+
+  let proxyResponse: { ok: boolean; status?: number; text?: string; error?: string };
   try {
     const init: RequestInit = {
       method: 'POST',
@@ -219,21 +235,40 @@ async function loadNeteaseCloudLyricText(
       credentials: 'include',
       body: `params=${encodeURIComponent(encrypted.params)}&encSecKey=${encodeURIComponent(encrypted.encSecKey)}`,
     };
-    if (request.signal) init.signal = request.signal;
-    response = await fetch(url, init);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chromeObj = typeof window !== 'undefined' ? (window as any).chrome : undefined;
+    const isNeteaseOrigin = typeof window !== 'undefined' && window.location.hostname.includes('music.163.com');
+
+    if (!isNeteaseOrigin && chromeObj?.runtime?.sendMessage) {
+      proxyResponse = await chromeObj.runtime.sendMessage({
+        kind: 'lyric-stage-fetch-proxy',
+        request: { url: url.toString(), init },
+      });
+      if (!proxyResponse) throw new Error('No response from fetch proxy');
+      if (proxyResponse.error) throw new Error(proxyResponse.error);
+    } else {
+      if (request.signal) init.signal = request.signal;
+      const response = await fetch(url, init);
+      proxyResponse = {
+        ok: response.ok,
+        status: response.status,
+        text: await response.text(),
+      };
+    }
   } catch (error) {
     return {
       ok: false,
       reason: error instanceof Error ? error.message : 'netease-cloud-fetch-failed',
     };
   }
-  if (!response.ok) {
-    return { ok: false, reason: `netease-cloud-http-${response.status}` };
+  if (!proxyResponse.ok) {
+    return { ok: false, reason: `netease-cloud-http-${proxyResponse.status}` };
   }
 
   let payload: CloudLyricResponse;
   try {
-    payload = (await response.json()) as CloudLyricResponse;
+    payload = JSON.parse(proxyResponse.text || '{}') as CloudLyricResponse;
   } catch {
     return { ok: false, reason: 'netease-cloud-invalid-json' };
   }
