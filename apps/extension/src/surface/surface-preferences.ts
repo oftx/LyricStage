@@ -55,8 +55,8 @@ export const DEFAULT_SURFACE_PREFERENCES: SurfacePreferences = Object.freeze({
   displayMode: 'karaoke',
   backgroundMode: 'cover',
   theme: 'system',
-  translationVisible: true,
-  pronunciationVisible: true,
+  translationVisible: false,
+  pronunciationVisible: false,
   debugChrome: false,
   // Fullscreen defaults (user-set): weight 4, size tier 5.
   fullscreenFontWeightTier: 4,

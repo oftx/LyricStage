@@ -252,8 +252,8 @@ export interface LyricsPlayerController {
 const defaultOptions: LyricsPlayerOptions = {
   displayMode: "karaoke",
   backgroundAppearance: "light",
-  translationVisible: true,
-  pronunciationVisible: true,
+  translationVisible: false,
+  pronunciationVisible: false,
   reducedMotion: false,
 };
 
