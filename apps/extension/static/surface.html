@@ -41,6 +41,7 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
+    html[data-idle="true"] { cursor: none !important; }
     /* Flex column, not grid: display:none children stop being grid items and
        auto-placement then collapses tracks (the blank-panel bug class). Flex
        simply skips hidden children. */
@@ -144,7 +145,7 @@
       transform: translateY(-4px);
       transition: opacity 0.22s ease, transform 0.22s ease;
     }
-    html[data-pointer-over="true"] .float-chrome,
+    html[data-pointer-over="true"]:not([data-idle="true"]) .float-chrome,
     .float-chrome:has(:focus-visible) {
       opacity: 1; pointer-events: auto; transform: none;
     }

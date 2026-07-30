@@ -616,6 +616,16 @@ function wireSettingsControls(): void {
     // Fullscreen has its own typography pair — swap tiers with the mode.
     applyTypographyTiers();
     syncSettingsUi();
+
+    if (isDocumentFullscreen()) {
+      resetPointerIdleTimer();
+    } else {
+      if (pointerIdleTimer !== null) {
+        window.clearTimeout(pointerIdleTimer);
+        pointerIdleTimer = null;
+      }
+      delete document.documentElement.dataset.idle;
+    }
   });
 
   document.querySelectorAll<HTMLButtonElement>('[data-display-mode]').forEach((btn) => {
@@ -1106,11 +1116,42 @@ function connect(): void {
 // Floating chrome reveal: pointer presence is tracked on <html>. Buttons
 // blur after pointer interactions so residual focus cannot pin the bar
 // visible once the pointer leaves (keyboard :focus-visible still reveals).
+
+let pointerIdleTimer: number | null = null;
+
+function resetPointerIdleTimer(): void {
+  if (pointerIdleTimer !== null) {
+    window.clearTimeout(pointerIdleTimer);
+    pointerIdleTimer = null;
+  }
+  if (isDocumentFullscreen()) {
+    pointerIdleTimer = window.setTimeout(() => {
+      document.documentElement.dataset.idle = 'true';
+    }, 3000);
+  }
+}
+
 document.documentElement.addEventListener('mouseenter', () => {
   document.documentElement.dataset.pointerOver = 'true';
+  delete document.documentElement.dataset.idle;
+  resetPointerIdleTimer();
 });
 document.documentElement.addEventListener('mouseleave', () => {
   delete document.documentElement.dataset.pointerOver;
+  if (pointerIdleTimer !== null) {
+    window.clearTimeout(pointerIdleTimer);
+    pointerIdleTimer = null;
+  }
+});
+document.documentElement.addEventListener('pointermove', () => {
+  // Edge case: if we exited fullscreen and pointer didn't leave but lost pointerOver somehow
+  if (!document.documentElement.dataset.pointerOver) {
+    document.documentElement.dataset.pointerOver = 'true';
+  }
+  if (document.documentElement.dataset.idle === 'true') {
+    delete document.documentElement.dataset.idle;
+  }
+  resetPointerIdleTimer();
 });
 ui.floatChrome?.addEventListener('pointerup', () => {
   window.setTimeout(() => {
