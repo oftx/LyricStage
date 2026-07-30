@@ -901,21 +901,28 @@ function paint(): void {
   // with "waiting for session" once a lyric document is bound.
   const hasLyrics = lyricRevision > 0;
   if ((!projected || !held) && !hasLyrics) {
-    ui.empty?.removeAttribute('hidden');
-    ui.live?.setAttribute('hidden', '');
-    if (ui.empty && lastPaintedEmptyState !== 'waiting') {
-      lastPaintedEmptyState = 'waiting';
-      ui.empty.textContent = '等待播放会话 — 在支持的网站播放音乐或视频后，歌词将显示在这里';
+    if (pipWindow) {
+      ui.empty?.setAttribute('hidden', '');
+    } else {
+      ui.empty?.removeAttribute('hidden');
+      if (ui.empty && lastPaintedEmptyState !== 'waiting') {
+        lastPaintedEmptyState = 'waiting';
+        ui.empty.textContent = '等待播放会话 — 在支持的网站播放音乐或视频后，歌词将显示在这里';
+      }
     }
+    ui.live?.setAttribute('hidden', '');
     return;
   }
   if (!hasLyrics) {
     // Session alive but no lyric bound: the old code hid the overlay and
     // left a blank void with no call to action (review finding).
-    ui.empty?.removeAttribute('hidden');
-    if (ui.empty && lastPaintedEmptyState !== 'no-lyrics') {
-      lastPaintedEmptyState = 'no-lyrics';
-      ui.empty.innerHTML = `
+    if (pipWindow) {
+      ui.empty?.setAttribute('hidden', '');
+    } else {
+      ui.empty?.removeAttribute('hidden');
+      if (ui.empty && lastPaintedEmptyState !== 'no-lyrics') {
+        lastPaintedEmptyState = 'no-lyrics';
+        ui.empty.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 8px;">
           <div>歌词未装载</div>
           <div>
@@ -926,23 +933,24 @@ function paint(): void {
         </div>
       `;
 
-      document.getElementById('empty-link-library')?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        libraryOpen = true;
-        settingsOpen = false;
-        onlineSearchOpen = false;
-        syncSettingsUi();
-        void refreshLibraryUi();
-      });
+        document.getElementById('empty-link-library')?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          libraryOpen = true;
+          settingsOpen = false;
+          onlineSearchOpen = false;
+          syncSettingsUi();
+          void refreshLibraryUi();
+        });
 
-      document.getElementById('empty-link-search')?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        onlineSearchOpen = true;
-        settingsOpen = false;
-        libraryOpen = false;
-        syncSettingsUi();
-        wireOnlineSearchUi();
-      });
+        document.getElementById('empty-link-search')?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          onlineSearchOpen = true;
+          settingsOpen = false;
+          libraryOpen = false;
+          syncSettingsUi();
+          wireOnlineSearchUi();
+        });
+      }
     }
   } else {
     lastPaintedEmptyState = 'hidden';
