@@ -1921,7 +1921,7 @@ async function toggleDocumentPip(): Promise<void> {
   const host = ui.playerHost;
   if (!host) return;
   try {
-    pipWindow = await api.requestWindow({ width: 400, height: 560 });
+    pipWindow = await api.requestWindow({ width: 360, height: 720 });
   } catch {
     pipWindow = null;
     return;
