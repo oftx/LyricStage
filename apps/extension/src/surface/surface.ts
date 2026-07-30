@@ -917,7 +917,7 @@ function paint(): void {
       lastPaintedEmptyState = 'no-lyrics';
       ui.empty.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 8px;">
-          <div>未找到匹配歌词</div>
+          <div>歌词未装载</div>
           <div>
             <button type="button" class="empty-link" id="empty-link-library">从歌词库中选取</button>
             或
