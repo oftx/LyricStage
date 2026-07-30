@@ -877,7 +877,7 @@ async function openLyricWindow(): Promise<{ ok: true; windowId: number } | { ok:
   const created = await chrome.windows.create({
     url: chrome.runtime.getURL('surface.html'),
     type: 'popup',
-    width: 440,
+    width: 360,
     height: 1080,
     focused: true,
   });
