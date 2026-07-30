@@ -14,6 +14,7 @@
 const PANEL_STATE_KEY = 'lyric-panel:';
 /** Popup option: explicit false hides the edge handle on supported pages. */
 const PANEL_HANDLE_KEY = 'lyric-stage:panel-handle';
+const PANEL_HANDLE_FULLSCREEN_KEY = 'lyric-stage:panel-handle-fullscreen';
 
 export interface PanelLayout {
   readonly x: number;
@@ -106,6 +107,7 @@ export function createFloatingLyricPanel(options: {
       display: grid; place-items: center;
     }
     .entry:hover, .entry:focus-visible { opacity: 1; }
+    .entry[data-faded="true"] { opacity: 0; pointer-events: none; }
     .entry:focus-visible { outline: 2px solid #4c8bf5; }
     .panel {
       position: fixed; pointer-events: auto; display: none;
@@ -201,6 +203,31 @@ export function createFloatingLyricPanel(options: {
   let layout = { ...DEFAULT_LAYOUT };
   let frameLoaded = false;
 
+  let handleEnabled = true;
+  let handleFullscreenEnabled = false;
+  let isFullscreen = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
+  let isMouseIdleInFullscreen = false;
+  let mouseIdleTimer: number | null = null;
+
+  function applyHandleVisibility(): void {
+    if (!handleEnabled) {
+      entry.style.display = 'none';
+      return;
+    }
+    if (isFullscreen && !handleFullscreenEnabled) {
+      entry.style.display = 'none';
+      return;
+    }
+
+    entry.style.display = layout.open ? 'none' : '';
+
+    if (isFullscreen && isMouseIdleInFullscreen) {
+      entry.dataset.faded = 'true';
+    } else {
+      entry.removeAttribute('data-faded');
+    }
+  }
+
   function currentGeometry(): ResolvedPanelGeometry {
     return resolveGeometry(layout, window.innerWidth, window.innerHeight);
   }
@@ -212,7 +239,9 @@ export function createFloatingLyricPanel(options: {
     panel.style.width = `${geometry.width}px`;
     panel.style.height = `${geometry.renderHeight}px`;
     panel.dataset.open = String(layout.open);
-    entry.style.display = layout.open ? 'none' : '';
+
+    applyHandleVisibility();
+
     if (layout.open && !frameLoaded) {
       // Lazy-load: the surface player only spins up when first opened.
       frame.src = options.surfaceUrl;
@@ -308,23 +337,62 @@ export function createFloatingLyricPanel(options: {
   const onViewportResize = (): void => applyLayout();
   window.addEventListener('resize', onViewportResize);
 
-  // Popup-controlled handle visibility. Hiding the handle does not close an
-  // OPEN panel (that would yank lyrics mid-song); it only removes the entry.
-  let handleEnabled = true;
-  function applyHandleVisibility(): void {
-    entry.style.visibility = handleEnabled ? '' : 'hidden';
+  function resetIdleTimer(): void {
+    if (mouseIdleTimer !== null) {
+      window.clearTimeout(mouseIdleTimer);
+      mouseIdleTimer = null;
+    }
+    if (isFullscreen) {
+      if (isMouseIdleInFullscreen) {
+        isMouseIdleInFullscreen = false;
+        applyHandleVisibility();
+      }
+      mouseIdleTimer = window.setTimeout(() => {
+        isMouseIdleInFullscreen = true;
+        applyHandleVisibility();
+      }, 3000);
+    } else {
+      isMouseIdleInFullscreen = false;
+      applyHandleVisibility();
+    }
   }
+
+  const onFullscreenChange = (): void => {
+    isFullscreen = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
+    resetIdleTimer();
+    applyHandleVisibility();
+  };
+
+  const onMouseMove = (): void => {
+    if (isFullscreen) {
+      resetIdleTimer();
+    }
+  };
+
+  document.addEventListener('fullscreenchange', onFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+  window.addEventListener('mousemove', onMouseMove);
+
   try {
-    void chrome.storage.local.get(PANEL_HANDLE_KEY).then((stored) => {
+    void chrome.storage.local.get([PANEL_HANDLE_KEY, PANEL_HANDLE_FULLSCREEN_KEY]).then((stored) => {
       handleEnabled = stored[PANEL_HANDLE_KEY] !== false;
+      handleFullscreenEnabled = stored[PANEL_HANDLE_FULLSCREEN_KEY] === true;
       applyHandleVisibility();
     }).catch(() => {
       // invalidated context — handle stays visible
     });
     chrome.storage.onChanged.addListener((changes, area) => {
-      if (area !== 'local' || !(PANEL_HANDLE_KEY in changes)) return;
-      handleEnabled = changes[PANEL_HANDLE_KEY]?.newValue !== false;
-      applyHandleVisibility();
+      if (area !== 'local') return;
+      let changed = false;
+      if (PANEL_HANDLE_KEY in changes) {
+        handleEnabled = changes[PANEL_HANDLE_KEY]?.newValue !== false;
+        changed = true;
+      }
+      if (PANEL_HANDLE_FULLSCREEN_KEY in changes) {
+        handleFullscreenEnabled = changes[PANEL_HANDLE_FULLSCREEN_KEY]?.newValue === true;
+        changed = true;
+      }
+      if (changed) applyHandleVisibility();
     });
   } catch {
     // storage unavailable — handle stays visible
@@ -382,6 +450,12 @@ export function createFloatingLyricPanel(options: {
     destroy(): void {
       window.removeEventListener('resize', onViewportResize);
       window.removeEventListener('message', onThemeMessage);
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+      window.removeEventListener('mousemove', onMouseMove);
+      if (mouseIdleTimer !== null) {
+        window.clearTimeout(mouseIdleTimer);
+      }
       host.remove();
     },
     setVisibility(visible: boolean): void {

@@ -19,18 +19,22 @@ const el = {
   openLyrics: document.getElementById('open-lyrics') as HTMLButtonElement,
   refresh: document.getElementById('refresh') as HTMLButtonElement,
   optPanelHandle: document.getElementById('opt-panel-handle') as HTMLInputElement,
+  optPanelHandleFullscreen: document.getElementById('opt-panel-handle-fullscreen') as HTMLInputElement,
   optDebug: document.getElementById('opt-debug') as HTMLInputElement,
 };
 
 /** Shared with surfaces (debug) and content scripts (handle visibility). */
 const DEBUG_CHROME_KEY = 'lyric-stage:debug-chrome';
 const PANEL_HANDLE_KEY = 'lyric-stage:panel-handle';
+const PANEL_HANDLE_FULLSCREEN_KEY = 'lyric-stage:panel-handle-fullscreen';
 
 function wireOptions(): void {
-  void chrome.storage.local.get([DEBUG_CHROME_KEY, PANEL_HANDLE_KEY]).then((stored) => {
+  void chrome.storage.local.get([DEBUG_CHROME_KEY, PANEL_HANDLE_KEY, PANEL_HANDLE_FULLSCREEN_KEY]).then((stored) => {
     el.optDebug.checked = stored[DEBUG_CHROME_KEY] === true;
     // Handle defaults ON; only an explicit false hides it.
     el.optPanelHandle.checked = stored[PANEL_HANDLE_KEY] !== false;
+    // Fullscreen handle defaults OFF; only an explicit true shows it.
+    el.optPanelHandleFullscreen.checked = stored[PANEL_HANDLE_FULLSCREEN_KEY] === true;
     el.statusCard.hidden = !el.optDebug.checked;
   });
   el.optDebug.addEventListener('change', () => {
@@ -43,6 +47,11 @@ function wireOptions(): void {
     void (el.optPanelHandle.checked
       ? chrome.storage.local.remove(PANEL_HANDLE_KEY)
       : chrome.storage.local.set({ [PANEL_HANDLE_KEY]: false }));
+  });
+  el.optPanelHandleFullscreen.addEventListener('change', () => {
+    void (el.optPanelHandleFullscreen.checked
+      ? chrome.storage.local.set({ [PANEL_HANDLE_FULLSCREEN_KEY]: true })
+      : chrome.storage.local.remove(PANEL_HANDLE_FULLSCREEN_KEY));
   });
 }
 
